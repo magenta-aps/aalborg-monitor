@@ -10,6 +10,9 @@
 /lib
 /lib64
 
+/AutoIT
+
 /*.sqlite3
+.komodotools
 *.komodoproject
 *.pyc
