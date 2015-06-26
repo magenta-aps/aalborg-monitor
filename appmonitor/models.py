@@ -98,7 +98,7 @@ class TestMeasure(models.Model):
                 self.test_run.verbose_name())
     
     def succeed(self):
-        self.ended = datetime.now()
+        self.ended = timezone.now()
         self.success = 1
         self.save()
 
