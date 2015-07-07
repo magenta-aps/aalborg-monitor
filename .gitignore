@@ -11,6 +11,9 @@
 
 /AutoIT
 
+/testsuites/**/*.exe
+
+/.idea
 /*.sqlite3
 .komodotools
 *.komodoproject

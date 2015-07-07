@@ -21,7 +21,34 @@ if __name__ == "__main__":
     db.connection.close()
 
     # Call autoit
-    result = subprocess.call(['AutoIT3.exe', sys.argv[1]], env=env)
+    script_file = sys.argv[1]
+    ext_idx = len(script_file) - 4
+    ext = script_file[ext_idx:].lower()
+
+    if ext != ".au3":
+        raise Exception("Target script is not an .au3 file")
+
+    exe_file = script_file[:ext_idx] + ".exe"
+    exe_timestamp = 0
+    if os.path.isfile(exe_file):
+        exe_timestamp = os.path.getmtime(exe_file)
+
+    # Recompile script if it has changed or has not yet been compiled
+    if os.path.getmtime(script_file) > exe_timestamp:
+        aut2exe_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "AutoIT", "Aut2Exe", "Aut2Exe.exe"
+        )
+        sys.stderr.write("Compiling %s => %s%s" % (script_file, exe_file, os.linesep))
+        subprocess.call([
+            aut2exe_file,
+            "/in", script_file,
+            "/out", exe_file,
+            "/console"
+        ])
+
+    # call the compiled exe file
+    result = subprocess.call([exe_file], env=env)
 
     # Clean up if run was successful
     if 0 == result:

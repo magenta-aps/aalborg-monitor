@@ -1,0 +1,22 @@
+[
+  {
+    "fields": {
+      "directory": "DEBUG",
+      "executeable": "DEBUG",
+      "contactpersons": [],
+      "name": "DEBUG"
+    },
+    "model": "appmonitor.testsuite",
+    "pk": 1
+  },
+  {
+    "fields": {
+      "started": "2015-06-16T14:55:52.661Z",
+      "ended": null,
+      "test_suite": 1,
+      "exitstatus": null
+    },
+    "model": "appmonitor.testrun",
+    "pk": 1
+  }
+]

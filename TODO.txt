@@ -1,0 +1,3 @@
+Installscript:
+ - Download AutoIT
+ - Download Selenium IEServer

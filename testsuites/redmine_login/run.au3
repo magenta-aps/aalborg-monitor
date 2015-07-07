@@ -1,6 +1,5 @@
 #include <IE.au3>
-#include "appmonitor.au3"
-
+#include "..\autoit_include\appmonitor.au3"
 
 local $iMeasureID = CreateMeasure("Start IE")
 Local $oIE = _IECreate("https://redmine.magenta-aps.dk/")
