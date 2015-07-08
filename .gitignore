@@ -9,7 +9,9 @@
 /lib
 /lib64
 
+
 /AutoIT
+/bin/IEDriverServer.exe
 
 /testsuites/**/*.exe
 
