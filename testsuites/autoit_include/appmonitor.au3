@@ -10,20 +10,20 @@ Local $sDbFile = EnvGet("APPMONITOR_SQLITE_FILE")
 ;Exit -1
 
 If Not $sDbFile Then
-    MsgBox($MB_SYSTEMMODAL, "SQLite Error", "No SQLite file specified")
+    ConsoleWriteError("SQLite Error: No SQLite file specified")
     Exit -1
 EndIf
 
 Global $iAppMonitorRunPK = EnvGet("APPMONITOR_RUN_ID")
 
 If Not $iAppMonitorRunPK Then
-    MsgBox($MB_SYSTEMMODAL, "SQLite Error", "No AppMonitor run id specified")
+    ConsoleWriteError("SQLite Error: No AppMonitor run id specified")
     Exit -1
 EndIf
 
 _SQLite_Startup()
 If @error Then
-    MsgBox($MB_SYSTEMMODAL, "SQLite Error", "Can't load SQLite!")
+    ConsoleWriteError("SQLite Error: Can't load SQLite!")
     Exit -1
 EndIf
 
@@ -85,4 +85,43 @@ Func CompleteMeasure($iMeasureId)
         "WHERE id = " & $iMeasureId
 
     Return _SQLite_Exec($hAppMonitorDb, $sSQL)
+EndFunc
+
+Func WaitForId($oIE, $sID, $iTimeout = 30)
+    Local $oFoundObject
+    Local $iLookupError = 0
+
+    ; Initialize timer
+    Local $hStartTime = TimerInit()
+
+    ; Make sure page is loaded
+    _IELoadWait($oIE, 0, $iTimeout)
+    If @error <> 0 Then
+        return SetError(@error, @extended, $oFoundObject)
+    EndIf
+
+    ; Try finding the object until we time out
+    While TimerDiff($hStartTime) < $iTimeout
+        $oFoundObject = _IEGetObjById($oIE, $sID)
+        If $oFoundObject Then
+            ExitLoop
+        ElseIf @error == $_IEStatus_NoMatch Then
+            ; Sleep for .2 seconds and try again
+            Sleep(200)
+        Else
+            $iLookupError = @error
+            ExitLoop
+        EndIf
+    WEnd
+
+    ; Set specific errors if we did not find anything
+    If Not $oFoundObject and $iLookupError == 0 Then
+        If TimerDiff($hStartTime) >= $iTimeout Then
+            $iLookupError = $_IEStatus_LoadWaitTimeout
+        Else
+            $iLookupError = $_IEStatus_NoMatch
+        EndIf
+    EndIf
+
+    Return SetError($iLookupError, 0, $oFoundObject)
 EndFunc

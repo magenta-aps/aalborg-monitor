@@ -1,12 +1,9 @@
 #include <IE.au3>
 #include "..\autoit_include\appmonitor.au3"
 
-local $iMeasureID = CreateMeasure("Start IE")
-Local $oIE = _IECreate("https://redmine.magenta-aps.dk/")
-If @error Then
-    Exit @error
-EndIf
-CompleteMeasure($iMeasureID)
+; Utility methods
+
+Local $oIE
 
 Func _ExitWithError()
     _IEQuit($oIE)
@@ -20,8 +17,18 @@ Func _FailIfError()
     EndIf
 EndFunc
 
-Local $oAccountDiv = _IEGetObjById($oIE, "account")
+
+; Actual test-case
+
+local $iMeasureID = CreateMeasure("Start IE")
+$oIE = _IECreate("https://redmine.magenta-aps.dk/")
+If @error Then
+    Exit @error
+EndIf
+
+Local $oAccountDiv = WaitForId($oIE, "account")
 _FailIfError()
+CompleteMeasure($iMeasureID)
 
 Local $oLinkElem = _IETagNameGetCollection($oAccountDiv, "a").Item(0)
 _FailIfError()
