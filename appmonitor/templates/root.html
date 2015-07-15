@@ -1,0 +1,42 @@
+{% extends "base_layout.html" %}
+
+{% block content %}
+<h1>Oversigt over testsuiter</h1>
+<ul>
+    <table class="table table-bordered table-striped table-hover table-clickablerows">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th class="text-right">Antal tests</th>
+                <th class="text-right">Success %</th>
+                <th class="text-right">Antal kontaktpersoner</th>
+                <th>Værktøjer</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for testsuite in object_list %}
+            <tr>
+                <td>{{ testsuite.name }}</td>
+                <td class="text-right">{{ testsuite.test_count }}</td>
+                <td class="text-right">{{ testsuite.success_pct|floatformat:2 }}%</td>
+                <td class="text-right">{{ testsuite.contactperson_count }}</td>
+                <td>
+                    <a href="/admin/appmonitor/testsuite/{{ testsuite.pk }}"
+                       class="btn btn-default" role="button"
+                       ><span class="glyphicon glyphicon-cog"></span
+                    ></a>
+                    <a href="/testsuite/{{ testsuite.pk }}"
+                       class="rowclicktarget btn btn-default" role="button"
+                       ><span class="glyphicon glyphicon-list-alt"></span
+                    ></a>
+                    <a href="/testsuite/{{ testsuite.pk }}/download"
+                       class="btn btn-default" role="button"
+                       ><span class="glyphicon glyphicon-download"></span
+                    ></a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</ul>
+{% endblock %}

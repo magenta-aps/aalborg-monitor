@@ -61,6 +61,21 @@ class TestSuite(models.Model):
         run.save()
         return run
 
+    def test_count(self):
+        return TestRun.objects.filter(test_suite=self).count()
+
+    def success_pct(self):
+        total = self.test_count()
+        if 0 == total:
+            return 0
+        successes = TestRun.objects.filter(
+            test_suite=self, exitstatus=0
+        ).count()
+        return float(successes) / total * 100
+
+    def contactperson_count(self):
+        return self.contactpersons.count()
+
 class TestRun(models.Model):
     test_suite = models.ForeignKey(TestSuite)
 

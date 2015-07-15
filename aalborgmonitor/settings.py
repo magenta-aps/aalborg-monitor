@@ -13,9 +13,8 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
-BASE_DIR = os.path.normcase(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
+SITE_DIR = os.path.normcase(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR =  os.path.dirname(SITE_DIR)
 TESTSUITES_DIR = os.path.join(BASE_DIR, "testsuites")
 LIB_DIR = os.path.join(BASE_DIR, "lib")
 AUTOIT_LIB_DIR = os.path.join(LIB_DIR, "autoit")
@@ -59,7 +58,9 @@ ROOT_URLCONF = 'aalborgmonitor.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            os.path.join(SITE_DIR, "templates")
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -104,3 +105,4 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(SITE_DIR, "static")
