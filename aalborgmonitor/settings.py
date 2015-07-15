@@ -13,8 +13,12 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.normcase(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 TESTSUITES_DIR = os.path.join(BASE_DIR, "testsuites")
+LIB_DIR = os.path.join(BASE_DIR, "lib")
+AUTOIT_LIB_DIR = os.path.join(LIB_DIR, "autoit")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
@@ -26,7 +30,6 @@ SECRET_KEY = 'mw#*p_qq=45-txn)0++sj2q2de91*xbghu_x2==7=2$py59vj='
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 

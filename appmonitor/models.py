@@ -3,6 +3,8 @@ from django.conf import settings
 from django.utils import timezone
 import os
 
+
+
 # Create your models here.
 
 class ContactPerson(models.Model):
@@ -36,7 +38,7 @@ class TestSuite(models.Model):
 
     @classmethod
     def locate_by_path(cls, path):
-        path = os.path.abspath(path)
+        path = os.path.normcase(os.path.abspath(path))
         if not path.startswith(settings.TESTSUITES_DIR):
             raise Exception("Path outside testsuites dir")
         dirname = os.path.basename(os.path.dirname(path))
@@ -84,6 +86,13 @@ class TestRun(models.Model):
         measure.save()
         return measure
 
+    def export_environment(self):
+        os.environ.set(
+            "APPMONITOR_SQLITE_FILE",
+            str(settings.DATABASES['default']['NAME'])
+        )
+        os.environ.set('APPMONITOR_RUN_ID', self.pk)
+
 class TestMeasure(models.Model):
     test_run = models.ForeignKey(TestRun)
 
@@ -105,4 +114,11 @@ class TestMeasure(models.Model):
     def fail(self):
         self.success = 0
         self.save()
+    
+class ConfigurationValue(models.Model):
+    name = models.CharField(max_length=255)
+    value = models.CharField(max_length=255)
+
+    def __unicode__(self):
+        return "ConfigurationValue (" + self.name + ")"
     

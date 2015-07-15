@@ -1,48 +1,38 @@
-#include <IE.au3>
-#include "..\autoit_include\appmonitor.au3"
+#include "..\..\lib\autoit\appmonitor.au3"
 
 ; Utility methods
 
 Local $oIE
-
-Func _ExitWithError()
-    _IEQuit($oIE)
-    MsgBox(0, "Notice", "Exiting with status: " & @error)
-    Exit @error
-EndFunc
-
-Func _FailIfError()
-    If @error Then
-        _ExitWithError(@error)
-    EndIf
-EndFunc
-
+Local $hDbConnection = AppmonitorConnectDb()
+Local $iRunId = AppmonitorGetRun($hDbConnection)
 
 ; Actual test-case
-
-local $iMeasureID = CreateMeasure("Start IE")
+local $iMeasureID = CreateMeasure($hDbConnection, $iRunId, "Start IE")
 $oIE = _IECreate("https://redmine.magenta-aps.dk/")
 If @error Then
     Exit @error
 EndIf
 
+; Shut down IE when program exits
+AppmonitorRegisterIEShutdown($oIE)
+
 Local $oAccountDiv = WaitForId($oIE, "account")
-_FailIfError()
-CompleteMeasure($iMeasureID)
+AppmonitorCheckError(@error)
+CompleteMeasure($hDbConnection, $iMeasureID)
 
 Local $oLinkElem = _IETagNameGetCollection($oAccountDiv, "a").Item(0)
-_FailIfError()
+AppmonitorCheckError(@error)
 
-$iMeasureID = CreateMeasure("Navigate to login page")
+$iMeasureID = CreateMeasure($hDbConnection, $iRunId, "Navigate to login page")
 _IEAction($oLinkElem, "click")
-_FailIfError()
+AppmonitorCheckError(@error)
 
 _IELoadWait ($oIE)
-_FailIfError()
+AppmonitorCheckError(@error)
 
 Local $oUsernameField = _IEGetObjById($oIE, "username")
-_FailIfError()
-CompleteMeasure($iMeasureID)
+AppmonitorCheckError(@error)
+CompleteMeasure($hDbConnection, $iMeasureID)
 
-MsgBox(0, "Notice", "Success")
+ConsoleWrite("Success!" & @CRLF)
 _IEQuit($oIE)

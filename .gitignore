@@ -6,7 +6,9 @@
 /eggs
 /parts
 /src/*.egg-info
-/lib
+/lib/*
+!/lib/autoit
+/lib/autoit/*.exe
 /lib64
 
 
