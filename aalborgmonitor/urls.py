@@ -17,9 +17,8 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.conf.urls.static import static
-from appmonitor.views import TestSuiteList
 
 urlpatterns = [
-    url(r'^$', TestSuiteList.as_view()),
     url(r'^admin/', include(admin.site.urls)),
+    url('', include('appmonitor.urls')),
 ]

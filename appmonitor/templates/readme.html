@@ -1,0 +1,10 @@
+{% extends "base_layout.html" %}
+{% load l10n %}
+
+{% block title %}README{% endblock %}
+
+{% block content %}
+<div>
+{{ markdown_html |safe }}
+</div>
+{% endblock %}

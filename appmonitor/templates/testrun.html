@@ -1,0 +1,92 @@
+{% extends "base_layout.html" %}
+{% load l10n %}
+
+{% block title %}Testafvikling {{ testrun.pk }}{% endblock %}
+
+{% block content %}
+<h1>Testafvikling {{ testrun.pk }}</h1>
+
+<div class="row">
+    <div class="col-md-2">
+        <strong>Tilhører testsuite</strong>
+    </div>
+    <div class="col-md-6">
+        <a href="/testsuite/{{ testrun.test_suite.pk }}"
+        >{{ testrun.test_suite.name }}</a>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        <strong>Startet</strong>
+    </div>
+    <div class="col-md-6">
+        {{ testrun.started |localize }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        <strong>Afsluttet</strong>
+    </div>
+    <div class="col-md-6">
+        {{ testrun.ended |default:""|localize }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        <strong>Antal målinger</strong>
+    </div>
+    <div class="col-md-6">
+        {{ testrun.testmeasure_set.count }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        <strong>Success</strong>
+    </div>
+    <div class="col-md-6">
+        {% if testrun.succeeded %}
+            <span class="label label-success">Ja</span>
+        {% else %}
+            <span class="label label-warning">Nej</span>
+        {% endif %}
+    </div>
+</div>
+<div>
+<h2>Målinger</h2>
+<table class="table table-bordered table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Navn</th>
+            <th>Startet</th>
+            <th>Afsluttet</th>
+            <th class="text-right">Tid brugt</th>
+            <th class="text-center">Success</th>
+            <th class="text-center">Værktøjer</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for measure in measures %}
+        <tr>
+            <td>{{ measure.name }}</td>
+            <td>{{ measure.started |date:'Y-m-d H:i:s' }}</td>
+            <td>{{ measure.ended |date:'Y-m-d H:i:s'|default:"" }}</td>
+            <td class="text-right">{{ measure.measure_time |default:""|floatformat:4 }}</td>
+            <td class="text-center">
+                {% if measure.success %}
+                    <span class="label label-success">Ja</span>
+                {% else %}
+                    <span class="label label-warning">Nej</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                <a href="/admin/appmonitor/testmeasure/{{ measure.pk }}"
+                   class="btn btn-default" role="button"
+                   ><span class="glyphicon glyphicon-cog"></span
+                ></a>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

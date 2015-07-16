@@ -1,0 +1,123 @@
+{% extends "base_layout.html" %}
+{% load l10n %}
+
+{% block title %}Testsuite - {{ testsuite.name }}{% endblock %}
+
+{% block content %}
+<h1>Testsuite: {{ testsuite.name }}</h1>
+
+<div class="row">
+    <div class="col-md-2">
+        <strong>Navn</strong>
+    </div>
+    <div class="col-md-6">
+        {{ testsuite.name }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        <strong>Antal kørsler</strong>
+    </div>
+    <div class="col-md-6">
+        {{ testsuite.tests.count }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        <strong>Antal fejlede tests</strong>
+    </div>
+    <div class="col-md-6">
+        {{ testsuite.failed_tests.count }}
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2">
+        <strong>Kontaktpersoner</strong>
+    </div>
+    <div class="col-md-6">
+        {% if testsuite.contactpersons.count %}
+
+        <div class="list-group">
+            {% for cp in testsuite.contactpersons.all %}
+                <a class="list-group-item"
+                   href="mailto:{{cp.email |escape }}"
+                >{{ cp.full_name |escape }}
+                &lt;{{ cp.email |escape }}&gt;</a>
+            {% endfor %}
+        </div>
+        {% else %}
+        Ingen kontaktpersoner angivet
+        {% endif %}
+    </div>
+</div>
+
+<div>
+    <a href="/admin/appmonitor/testsuite/{{ testsuite.pk }}" role="button" class="btn btn-default">Redigér</a>
+</div>
+
+<div>
+<h2>Afviklede tests</h2>
+<table class="table table-bordered table-striped table-hover table-clickablerows">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Startet</th>
+            <th>Afsluttet</th>
+            <th class="text-right">Antal målinger</th>
+            <th class="text-center">Success</th>
+            <th class="text-center">Værktøjer</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for testrun in runs %}
+        <tr class="{% if testrun.succeeded %}success{% else %}warning{%endif%}">
+            <td>{{ testrun.pk }}</td>
+            <td>{{ testrun.started |date:'Y-m-d H:i:s' }}</td>
+            <td>{{ testrun.ended |date:'Y-m-d H:i:s'|default:"" }}</td>
+            <td class="text-right">{{ testrun.testmeasure_set.count }}</td>
+            <td class="text-center">
+                {% if testrun.succeeded %}
+                    <span class="label label-success">Ja</span>
+                {% else %}
+                    <span class="label label-warning">Nej</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                <a href="/admin/appmonitor/testrun/{{ testrun.pk }}"
+                   class="btn btn-default" role="button"
+                   ><span class="glyphicon glyphicon-cog"></span
+                ></a>
+                <a href="/testrun/{{ testrun.pk }}"
+                   class="rowclicktarget btn btn-default" role="button"
+                   ><span class="glyphicon glyphicon-list-alt"></span
+                ></a>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<h2>Resultat-overblik</h2>
+<table class="table table-bordered table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Måling</th>
+            <th class="text-right">Antal målinger</th>
+            <th class="text-right">Antal fejlede</th>
+            <th class="text-right">Gennemsnitlig brugt tid</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for entry in testsuite.test_data %}
+        <tr class="{{ entry.class }}">
+            <td>{{ entry.name }}</td>
+            <td class="text-right">{{ entry.total }}</td>
+            <td class="text-right">{{ entry.failures }}</td>
+            <td class="text-right">{{ entry.avg_time|floatformat:4 }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+</div>
+{% endblock %}
