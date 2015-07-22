@@ -55,9 +55,7 @@ def wrap_run_autoit(script_path):
 
     result = run_autoit_script(script_path, run)
 
-    # Clean up if run was successful
-    if 0 == result:
-        run.finish()
+    run.finish(result)
     
     return result
 

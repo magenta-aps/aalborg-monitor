@@ -1,0 +1,36 @@
+{% autoescape off %}\
+Denne mail er sendt til følgende personer:
+
+{% for p in contactpersons %}\
+* {{ p.full_name }} <{{ p.email }}>
+{% endfor %}\
+
+{% if testsuite.email_message %}\
+{{ testsuite.email_message }}
+{% else %}\
+Der opstod en fejl under afvikling af test-suiten "{{ testsuite.name }}".
+{% endif %}\
+
+Afviklingen af testen startede {{ testrun.started |date:'Y-m-d H:i:s' }}\
+{%if testrun.ended %}\
+ og sluttede {{ testrun.ended |date:'Y-m-d H:i:s' }}\
+{% endif %}\
+.
+{% if measure %}\
+
+Fejlen opstod under afvikling af målingen "{{ measure.name }}".
+{% endif %}\
+{% if measure.failure_reason %}\
+
+Målingen rapporterede følgende fejl-besked:
+
+{{ measure.failure_reason }}\
+{% else %}\
+
+Fejlen opstod enten uafhængigt af enkelte målinger eller før der blev
+foretaget nogen målinger.
+{% endif %}\
+
+--
+  Applikationsovervågningssystemet
+{% endautoescape %}

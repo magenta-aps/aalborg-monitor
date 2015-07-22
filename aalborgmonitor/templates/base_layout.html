@@ -27,12 +27,12 @@
     <div id="sidebar-wrapper">
         <ul class="sidebar-nav">
             <li class="sidebar-brand"><a href="/">Hjem</a></li>
-            <li><a href="/admin/">Admin</a></li>
-            <li><a href="/admin/appmonitor/contactperson/"
+            <li><a href="{% url 'admin:index' %}">Admin</a></li>
+            <li><a href="{% url 'admin:index' %}appmonitor/contactperson/"
               >Kontaktpersoner</a></li>
-            <li><a href="/admin/appmonitor/configurationvalue/"
+            <li><a href="{% url 'admin:index' %}appmonitor/configurationvalue/"
               >Konfigurations-værdier</a></li>
-            <li><a href="/readme">README</a></li>
+            <li><a href="{% url 'appmonitor:readme' %}">README</a></li>
         </ul>
     </div>
     <!-- /#sidebar-wrapper -->
@@ -40,10 +40,20 @@
     <!-- Page Content -->
     <div id="page-content-wrapper">
         <div class="container-fluid">
+            <ol class="breadcrumb">
+                {% url 'appmonitor:index' as home_url %}
+                {% if request.get_full_path = home_url %}
+                <li class="active">Forside</li>
+                {% else %}
+                  <li><a href="{{ home_url }}">Forside</a></li>
+                {% endif %}
+                {% block breadcrumbs %}
+                {% endblock %}
+            </ol>
             <div class="row">
                 <div class="col-lg-12">
                     {% block content %}
-                    <h1>Hello, world!</h1>
+                    <h1>Default page</h1>
                     {% endblock %}
                 </div>
             </div>

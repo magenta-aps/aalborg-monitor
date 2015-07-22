@@ -30,11 +30,11 @@
                    class="btn btn-default" role="button"
                    ><span class="glyphicon glyphicon-cog"></span
                 ></a>
-                <a href="/testsuite/{{ testsuite.pk }}"
+                <a href="{% url 'appmonitor:testsuite' testsuite.pk %}"
                    class="rowclicktarget btn btn-default" role="button"
                    ><span class="glyphicon glyphicon-list-alt"></span
                 ></a>
-                <a href="/testsuite/{{ testsuite.pk }}/download"
+                <a href="{% url 'appmonitor:testsuite_download' testsuite.pk %}"
                    class="btn btn-default" role="button"
                    ><span class="glyphicon glyphicon-download"></span
                 ></a>

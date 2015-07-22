@@ -1,9 +1,10 @@
 from django.shortcuts import render
 from django.conf import settings
+from django.http import HttpResponse
 from django.views.generic import ListView, DetailView, TemplateView
 from appmonitor.models import TestSuite, TestRun
 from markdown import Markdown
-import os
+import os, datetime
 
 markdown_formatter = Markdown(output_format="html5")
 
@@ -26,6 +27,23 @@ class TestSuiteDetailView(DetailView):
             context['runs'] = self.object.testrun_set.order_by('-started')
 
         return context
+
+class TestSuiteDownloadView(DetailView):
+    model = TestSuite
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        response = HttpResponse(
+            self.object.as_xls(), 'application/vnd.ms-excel'
+        )
+        dtstamp =  datetime.datetime.now().isoformat()[:19]
+        print dtstamp
+        dtstamp = dtstamp.replace("T", "_").replace(":", "")
+        fname = 'excel_export_%d_%s.xls' % (self.object.pk, dtstamp)
+        hdr = 'attachment; filename="%s"' % fname
+        response['Content-Disposition'] = hdr
+        return response
+
 
 class TestRunDetailView(DetailView):
     model = TestRun

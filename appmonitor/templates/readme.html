@@ -3,6 +3,10 @@
 
 {% block title %}README{% endblock %}
 
+{% block breadcrumbs %}
+    <li>README</li>
+{% endblock %}
+
 {% block content %}
 <div>
 {{ markdown_html |safe }}

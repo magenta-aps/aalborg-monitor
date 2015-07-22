@@ -179,6 +179,7 @@ Func AppmonitorEncrypt($sStringToEncrypt)
     Return _StringToHex($sEncrypted)
 EndFunc
 
+local $_AppmonitorLastMeasure = -1
 Func CreateMeasure($hAppmonitorDb, $iAppmonitorRun, $sName)
     Local $sSQL = "" & _
         "INSERT INTO appmonitor_testmeasure " & _
@@ -192,17 +193,29 @@ Func CreateMeasure($hAppmonitorDb, $iAppmonitorRun, $sName)
     If $iResult == $SQLITE_OK Then
         Local $iId = _SQLite_LastInsertRowID($hAppmonitorDb)
         ConsoleWrite("Started measure '" & $sName & "' [" & $iId & "]" & @CRLF)
+        $_AppmonitorLastMeasure = $_Id
         Return $iId
     Else
-        MsgBox($MB_SYSTEMMODAL, "SQLite Error", _
-               "Failed to create measure query")
+        ConsoleWriteError("SQLite Error: Failed to create measure query")
         Exit -1
     EndIf
     Return 0
 EndFunc
 
-Func CompleteMeasure($hAppmonitorDb, $iMeasureId)
+Func CompleteMeasure($hAppmonitorDb, $iMeasureId = -1)
     ConsoleWrite("Completing measure [" & $iMeasureId & "]" & @CRLF)
+
+    If $iMesureId == -1 Then
+        $iMesureId = $_AppmonitorLastMeasure
+        $_AppmonitorLastMeasure = -1
+        If $iMesureId == -1 Then
+            ConsoleWriteError( _
+                "Trying to complete unspecifed measure, but there is no " & _
+                "measure currently registered"
+            )
+            Exit -1
+        EndIf
+    EndIf
 
     Local $sSQL = "" & _
         "UPDATE appmonitor_testmeasure " & _

@@ -3,6 +3,10 @@
 
 {% block title %}Testsuite - {{ testsuite.name }}{% endblock %}
 
+{% block breadcrumbs %}
+    <li>{{ testsuite }}</li>
+{% endblock %}
+
 {% block content %}
 <h1>Testsuite: {{ testsuite.name }}</h1>
 
@@ -53,13 +57,14 @@
 
 <div>
     <a href="/admin/appmonitor/testsuite/{{ testsuite.pk }}" role="button" class="btn btn-default">Redigér</a>
+    <a href="{% url 'appmonitor:testsuite_download' testsuite.pk %}" role="button" class="btn btn-default">Download</a>
 </div>
 
 <div>
 <h2>Afviklede tests</h2>
 <table class="table table-bordered table-striped table-hover table-clickablerows">
     <thead>
-        <tr>
+        <tr class="info">
             <th>Id</th>
             <th>Startet</th>
             <th>Afsluttet</th>
@@ -87,7 +92,7 @@
                    class="btn btn-default" role="button"
                    ><span class="glyphicon glyphicon-cog"></span
                 ></a>
-                <a href="/testrun/{{ testrun.pk }}"
+                <a href="{% url 'appmonitor:testrun' testrun.pk %}"
                    class="rowclicktarget btn btn-default" role="button"
                    ><span class="glyphicon glyphicon-list-alt"></span
                 ></a>
@@ -100,7 +105,7 @@
 <h2>Resultat-overblik</h2>
 <table class="table table-bordered table-striped table-hover">
     <thead>
-        <tr>
+        <tr class="info">
             <th>Måling</th>
             <th class="text-right">Antal målinger</th>
             <th class="text-right">Antal fejlede</th>
@@ -110,7 +115,7 @@
     <tbody>
     {% for entry in testsuite.test_data %}
         <tr class="{{ entry.class }}">
-            <td>{{ entry.name }}</td>
+            <td class="primary">{{ entry.name }}</td>
             <td class="text-right">{{ entry.total }}</td>
             <td class="text-right">{{ entry.failures }}</td>
             <td class="text-right">{{ entry.avg_time|floatformat:4 }}</td>

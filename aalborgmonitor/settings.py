@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Django settings for aalborgmonitor project.
 
@@ -106,3 +107,18 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(SITE_DIR, "static")
+
+# Mail settings - must be overridden in the local settings file
+MAIL_SUBJECT = "Automatisk generet mail fra applikationsovervågningssystemet"
+MAIL_FROM_EMAIL = None
+MAIL_SMTP_SERVER = None
+MAIL_SMTP_SERVER_PORT = None
+MAIL_SMTP_USE_TLS = False
+MAIL_SMTP_SERVER_LOGIN = None
+MAIL_SMTP_SERVER_PASSWORD = None
+
+# Import local settings if they exist
+LOCAL_SETTINGS_FILE = os.path.join(SITE_DIR, "local_settings.py")
+if os.path.exists(LOCAL_SETTINGS_FILE):
+    from local_settings import *
+

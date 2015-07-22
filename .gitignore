@@ -12,6 +12,8 @@
 /lib64
 
 
+/aalborgmonitor/local_settings.py
+
 /AutoIT
 /bin/IEDriverServer.exe
 

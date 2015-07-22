@@ -3,6 +3,12 @@
 
 {% block title %}Testafvikling {{ testrun.pk }}{% endblock %}
 
+{% block breadcrumbs %}
+    <li><a href="{% url 'appmonitor:testsuite' testrun.test_suite.pk %}">{{ testrun.test_suite }}</a></li>
+    <li>Testafvikling {{ testrun.pk }}</li>
+{% endblock %}
+
+
 {% block content %}
 <h1>Testafvikling {{ testrun.pk }}</h1>
 
@@ -55,7 +61,7 @@
 <h2>Målinger</h2>
 <table class="table table-bordered table-striped table-hover">
     <thead>
-        <tr>
+        <tr class="info">
             <th>Navn</th>
             <th>Startet</th>
             <th>Afsluttet</th>
