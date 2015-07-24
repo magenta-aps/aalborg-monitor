@@ -9,7 +9,18 @@
 #include <SQLite.au3>
 #include <SQLite.dll.au3>
 
+Local $__AppmonitorDbHandle
+Local $__AppminotorRun
+Local $__AppmonitorLastMeasure = -1
+Local $__AppmonitorLastMeasureName = ""
+Local $__AppmonitorMeasureError = ""
+Local $__IEObjectToShutdown
+
 Func AppmonitorConnectDb()
+    If $__AppmonitorDbHandle Then
+        Return
+    EndIf
+
     Local $sDbFile = EnvGet("APPMONITOR_SQLITE_FILE")
 
     If Not $sDbFile Then
@@ -23,16 +34,27 @@ Func AppmonitorConnectDb()
         Exit -1
     EndIf
 
-    Local $hAppmonitorDb = _SQLite_Open($sDbFile) ; Open a permanent disk database
+    $__AppmonitorDbHandle = _SQLite_Open($sDbFile) ; Open a permanent disk database
     If @error Then
         ConsoleWriteError("SQLite Error: Can't open " & $sDbFile & @CRLF)
         Exit -1
     EndIf
 
-    Return $hAppmonitorDb
+    Return $__AppmonitorDbHandle
 EndFunc
 
-Func AppmonitorGetRun($hAppmonitorDb)
+Func AppmonitorGetDbHandle()
+    AppmonitorConnectDb()
+    return $__AppmonitorDbHandle
+EndFunc
+
+Func AppmonitorGetRun()
+    If $__AppminotorRun Then
+        return $__AppminotorRun
+    EndIf
+
+    $hAppmonitorDb = AppmonitorGetDbHandle()
+
     Local $iAppmonitorRun = EnvGet("APPMONITOR_RUN_ID")
 
     If Not $iAppmonitorRun Then
@@ -54,7 +76,7 @@ Func AppmonitorGetRun($hAppmonitorDb)
             $sDbError = "Sanity check failed"
         EndIf
     Else
-        $sDbError = "Sanity check query failed"
+        $sDbError = "Sanity check query failed: " & _SQLite_ErrMsg($hAppmonitorDb)
     EndIf
 
     If $sDbError <> "" Then
@@ -65,7 +87,9 @@ Func AppmonitorGetRun($hAppmonitorDb)
     Return $iAppmonitorRun
 EndFunc
 
-Func AppmonitorGetDbConfigValue($hAppmonitorDb, $sConfigName)
+Func AppmonitorGetDbConfigValue($sConfigName)
+    $hAppmonitorDb = AppmonitorGetDbHandle()
+
     Local $hQuery, $aRow, $iSuccess
     $iSuccess = _SQLite_Query($hAppmonitorDb, _
         "SELECT confval.value " & _
@@ -179,8 +203,61 @@ Func AppmonitorEncrypt($sStringToEncrypt)
     Return _StringToHex($sEncrypted)
 EndFunc
 
-local $_AppmonitorLastMeasure = -1
-Func CreateMeasure($hAppmonitorDb, $iAppmonitorRun, $sName)
+Func AppmonitorSetMeasureData($iMeasureId, $sMeasureName)
+    $__AppmonitorLastMeasure = $iMeasureId
+    $__AppmonitorLastMeasureName = $sMeasureName
+EndFunc
+
+Func AppmonitorResetMeasureData($iError, $iExtended, $mReturnValue)
+    AppmonitorSetMeasureData(-1, "")
+    $__AppmonitorMeasureError = ""
+    Return SetError($iError, $iExtended, $mReturnValue)
+EndFunc
+
+Func AppmonitorGetMeasure($iMeasureId = -1)
+    If $iMeasureId <> -1 Then
+        return $iMeasureId
+    Else
+        Return $__AppmonitorLastMeasure
+    EndIf
+EndFunc
+
+Func AppmonitorGetMeasureName($iMeasureId = -1, $sMeasureName = "")
+    If $sMeasureName == "" Then
+        $sMeasureName = $__AppmonitorLastMeasureName
+    EndIf
+
+    If $sMeasureName <> "" Then
+        return $sMeasureName
+    EndIf
+
+    Return "Measure with id " & AppmonitorGetMeasure($iMeasureId)
+EndFunc
+
+Func AppmonitorSetMeasureError($sMessage, $iMeasureId = -1)
+    $iMeasureId = AppmonitorGetMeasure($iMeasureId)
+
+    If $iMeasureId == -1 Then
+        Return
+    EndIf
+
+    $__AppmonitorMeasureError = $sMessage
+EndFunc
+
+Func AppmonitorGetMeasureError($iMeasureId = -1)
+    If AppmonitorGetMeasure($iMeasureId) == -1 Then
+        Return ""
+    EndIf
+
+    Return $__AppmonitorMeasureError
+EndFunc
+
+Func AppmonitorCreateMeasure($sName, $iAppmonitorRun = -1)
+    $hAppmonitorDb = AppmonitorGetDbHandle()
+    If $iAppmonitorRun == -1 Then
+        $iAppmonitorRun = AppmonitorGetRun()
+    EndIf
+
     Local $sSQL = "" & _
         "INSERT INTO appmonitor_testmeasure " & _
         "(test_run_id, name, started) " & _
@@ -193,29 +270,30 @@ Func CreateMeasure($hAppmonitorDb, $iAppmonitorRun, $sName)
     If $iResult == $SQLITE_OK Then
         Local $iId = _SQLite_LastInsertRowID($hAppmonitorDb)
         ConsoleWrite("Started measure '" & $sName & "' [" & $iId & "]" & @CRLF)
-        $_AppmonitorLastMeasure = $_Id
+        AppmonitorSetMeasureData($iId, $sName)
+        $__AppmonitorMeasureError = ""
         Return $iId
     Else
-        ConsoleWriteError("SQLite Error: Failed to create measure query")
+        ConsoleWriteError("SQLite Error: Failed create measure query")
         Exit -1
     EndIf
     Return 0
 EndFunc
 
-Func CompleteMeasure($hAppmonitorDb, $iMeasureId = -1)
-    ConsoleWrite("Completing measure [" & $iMeasureId & "]" & @CRLF)
+Func AppmonitorCompleteMeasure($iMeasureId = -1)
+    $iMeasureid = AppmonitorGetMeasure($iMeasureId)
 
-    If $iMesureId == -1 Then
-        $iMesureId = $_AppmonitorLastMeasure
-        $_AppmonitorLastMeasure = -1
-        If $iMesureId == -1 Then
-            ConsoleWriteError( _
-                "Trying to complete unspecifed measure, but there is no " & _
-                "measure currently registered"
-            )
-            Exit -1
-        EndIf
+    If $iMeasureid == -1 Then
+        ConsoleWriteError( _
+            "Trying to complete unspecifed measure, but there is no " & _
+            "measure currently registered" & @CRLF _
+        )
+        Exit -1
     EndIf
+
+    ConsoleWrite("Completing measure [" & AppmonitorGetMeasureName($iMeasureId) & "]" & @CRLF)
+
+    Local $hAppmonitorDb = AppmonitorGetDbHandle()
 
     Local $sSQL = "" & _
         "UPDATE appmonitor_testmeasure " & _
@@ -224,12 +302,75 @@ Func CompleteMeasure($hAppmonitorDb, $iMeasureId = -1)
             "success = 1 " & _
         "WHERE id = " & $iMeasureId
 
-    Return _SQLite_Exec($hAppmonitorDb, $sSQL)
+    Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)
+
+    Return AppmonitorResetMeasureData(@error, @extended, $iResult)
 EndFunc
 
-Func WaitForId(ByRef $oIE, $sID, $iTimeout = 30000)
+Func AppmonitorCheckCurrentMeasure($iError, $sMessage = "", $bFatal = True)
+    ; Do not do anything if there was no error
+    If $iError = 0 Then
+        Return
+    EndIf
+
+    ; Do not do anything if we are not currently measuring
+    Local $iMeasureId = AppmonitorGetMeasure()
+    If $iMeasureId == -1 Then
+        Return
+    EndIf
+
+    ; Check for a stored error
+    If $sMessage == "" Then
+        $sMessage = AppmonitorGetMeasureError($iMeasureId)
+    EndIf
+
+    ; Default message is reporting the error code
+    If $sMessage == "" Then
+        $sMessage = "Failed with error code " & $iError
+    EndIf
+
+    AppmonitorFailMeasure($sMessage, $iMeasureId, $bFatal)
+
+    If $bFatal Then
+        Exit $iError
+    EndIf
+EndFunc
+
+Func AppmonitorFailMeasure($sMessage, $iMeasureId = -1, $bFatal = True)
+    $iMeasureId = AppmonitorGetMeasure($iMeasureId)
+
+    If $iMeasureId == -1 Then
+        ConsoleWriteError( _
+            "Trying to fail unspecifed measure, but there is no " & _
+            "measure currently registered" & @CRLF _
+        )
+        Exit -1
+    EndIf
+
+    ConsoleWrite( _
+        "Failing measure [" & AppmonitorGetMeasureName($iMeasureId) & "] " & _
+        "with message '" & $sMessage & "'" & @CRLF _
+    )
+
+    Local $hAppmonitorDb = AppmonitorGetDbHandle()
+
+    Local $sSQL = "" & _
+        "UPDATE appmonitor_testmeasure " & _
+        "SET " & _
+            "ended = STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'), " & _
+            "success = 0, " & _
+            "failure_reason = " & _SQLite_FastEscape($sMessage) & " " & _
+        "WHERE id = " & $iMeasureId
+
+    Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)
+
+    Return AppmonitorResetMeasureData(@error, @extended, $iResult)
+EndFunc
+
+Func AppmonitorWaitForId(ByRef $oIE, $sID, $iTimeout = 30000)
     Local $oFoundObject
     Local $iLookupError = 0
+    Local $sMessage = ""
 
     ; Initialize timer
     Local $hStartTime = TimerInit()
@@ -238,7 +379,9 @@ Func WaitForId(ByRef $oIE, $sID, $iTimeout = 30000)
     _IELoadWait($oIE, 0, $iTimeout)
     If @error <> 0 Then
         Local $iError = @error, $iExtended = @extended
-        ConsoleWriteError("_IELoadWait timeout while trying to get object with id " & $sID & ": " & @error & @CRLF)
+        $sMessage = "_IELoadWait error while trying to get object with id " & $sID & ": " & @error
+        ConsoleWriteError($sMessage & @CRLF)
+        AppmonitorSetMeasureError($sMessage)
         return SetError($iError, $iExtended, $oFoundObject)
     EndIf
 
@@ -259,17 +402,157 @@ Func WaitForId(ByRef $oIE, $sID, $iTimeout = 30000)
     ; Set specific errors if we did not find anything
     If (Not IsObj($oFoundObject)) And ($iLookupError == 0) Then
         If TimerDiff($hStartTime) >= $iTimeout Then
-            ConsoleWriteError("Could not find object with ID " & $sID & " withing the specified time" & @CRLF)
+            $sMessage = "Could not find object with ID " & $sID & " withing the specified time"
             $iLookupError = $_IEStatus_LoadWaitTimeout
         Else
-            ConsoleWriteError("Object with id " & $sID & " not found" & @CRLF)
+            $sMessage = "Object with id " & $sID & " not found"
             $iLookupError = $_IEStatus_NoMatch
         EndIf
+    EndIf
+
+    If $iLookupError <> 0 Then
+        If $sMessage <> "" Then ConsoleWriteError($sMessage & @CRLF)
+        AppmonitorSetMeasureError($sMessage)
     EndIf
 
     Return SetError($iLookupError, 0, $oFoundObject)
 EndFunc
 
+Func AppmonitorExitWithError($iError)
+    ConsoleWriteError("Exiting with error: " & $iError & @CRLF)
+    Exit($iError)
+EndFunc
+
+Func AppmonitorCheckError($iError)
+    If $iError <> 0 Then
+        AppmonitorExitWithError($iError)
+    EndIf
+EndFunc
+
+Func AppmonitorMouseMoveAppletControl($hWnd, $sText, $hButton)
+    Local $winPosData = WinGetPos($hWnd)
+    Local $posData = ControlGetPos($hWnd, $sText, $hButton)
+    MouseMove($winPosData[0] + $posData[0] + $posData[2] / 2, $winPosData[1] + $posData[1] + $posData[3] / 2, 0)
+EndFunc
+
+Func AppmonitorControlWait($hWnd, $sText, $hButton, $iTimeout = 30)
+    Local $hWaitStart = TimerInit()
+    Local $fTimeout = $iTimeout * 1000
+    Local $iErrorValue = 0
+    Local $hResult
+
+    While TimerDiff($hWaitStart) < $fTimeout
+        $hResult = ControlGetHandle($hWnd, "", $hButton)
+        If $hResult Then
+            ExitLoop
+        EndIf
+        Sleep(200)
+    WEnd
+    If TimerDiff($hWaitStart) >= $fTimeout Then
+        $iErrorValue = $_IEStatus_LoadWaitTimeout
+    EndIf
+
+    Return SetError($iErrorValue, @extended, $hResult)
+EndFunc
+
+Func AppmonitorDigitalSignaturLogin($sWindowTitle = "DUBU Logon - Internet Explorer")
+    Local $sEncryptedPassword = AppmonitorGetDbConfigValue( _
+        "krypteret_digital_signatur_login" _
+    )
+    If Not $sEncryptedPassword Then
+        ConsoleWriteError("Could not read encrypted password value" & @CRLF)
+        Exit -1
+    EndIf
+    Local $sPassword = AppmonitorDecrypt($sEncryptedPassword)
+
+    ConsoleWriteError("Locating IE with login page" & @CRLF)
+    Local $oIEWin = WinWaitActive("[TITLE:" & $sWindowTitle & "; CLASS:IEFrame]", "", 5)
+    If @error Then
+        AppmonitorSetMeasureError("Failed to locate IE login page")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Locate applet OK button" & @CRLF)
+    Local $hControlButton = AppmonitorControlWait($oIEWin, "", "[CLASS:Button; INSTANCE:2]")
+    If @error Then
+        AppmonitorSetMeasureError("Failed to locate applet OK button")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Activating window" & @CRLF)
+    WinActivate($oIEWin)
+    If @error Then
+        AppmonitorSetMeasureError("Failed to make IE window active")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Move mouse to OK button" & @CRLF)
+    AppmonitorMouseMoveAppletControl($oIEWin, "", $hControlButton)
+    If @error Then
+        AppmonitorSetMeasureError("Failed to move mouse to OK button")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Click OK button" & @CRLF)
+    ControlClick($oIEWin, "", $hControlButton, "primary")
+    If @error Then
+        AppmonitorSetMeasureError("Failed to click on OK button")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Locate password dialog" & @CRLF)
+    Local $hWndDialog = WinWait("[TITLE:Adgang til signaturcentralen]", "", 10)
+    If @error Then
+        AppmonitorSetMeasureError("Failed to find dialog with password input")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Activate password dialog window" & @CRLF)
+    WinActivate($hWndDialog)
+    If @error Then
+        AppmonitorSetMeasureError("Failed to activate the dialog password dialog window")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Locate text input in password dialog" & @CRLF)
+    Local $hTextInput = AppmonitorControlWait($hWndDialog, "", "[CLASS:Edit; INSTANCE:1]")
+    If @error Then
+        AppmonitorSetMeasureError("Failed to find password input field")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Input password" & @CRLF)
+    ControlSend($hWndDialog, "", $hTextInput, $sPassword)
+    If @error Then
+        AppmonitorSetMeasureError("Failed to input the password")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Locate password OK button" & @CRLF)
+    Local $hDlgOKButton = ControlGetHandle($hWndDialog, "", "[CLASS:Button; INSTANCE:1]")
+    If @error Then
+        AppmonitorSetMeasureError("Failed to locate the OK button")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Move mouse to password OK button" & @CRLF)
+    AppmonitorMouseMoveAppletControl($hWndDialog, "", $hDlgOKButton)
+    If @error Then
+        AppmonitorSetMeasureError("Failed to move mouse to password OK button")
+        Return SetError(@error, @extended)
+    EndIf
+
+    ConsoleWriteError("Click password OK button" & @CRLF)
+    ControlClick($hWndDialog, "", $hDlgOKButton, "primary")
+    If @error Then
+        AppmonitorSetMeasureError("Failed to click on the password OK button")
+        Return SetError(@error, @extended)
+    EndIf
+
+    Return True
+EndFunc
+
+; Methods for handling proper shutdown of IE
 Func AppmonitorIEReattach($sString, $sMode = "title", $iInstance = 1)
     Local $hIEAttachStart = TimerInit()
 
@@ -289,7 +572,6 @@ Func AppmonitorIEReattach($sString, $sMode = "title", $iInstance = 1)
     Return SetError(0, 0, $oIE)
  EndFunc
 
-Local $__IEObjectToShutdown
 Func AppmonitorRegisterIEShutdown(ByRef $oIE)
     $__IEObjectToShutdown = $oIE
 EndFunc
@@ -301,13 +583,16 @@ Func __AppmonitorShutdownIE()
 EndFunc
 OnAutoItExitRegister("__AppmonitorShutdownIE")
 
-Func AppmonitorExitWithError($iError)
-    ConsoleWriteError("Exiting with error: " & $iError & @CRLF)
-    Exit($iError)
-EndFunc
-
-Func AppmonitorCheckError($iError)
-    If $iError <> 0 Then
-        AppmonitorExitWithError($iError)
+; If we die unexpectedly register it on the current measure
+Func __AppminotorShutdownMeasure()
+    Local $iMeasureId = AppmonitorGetMeasure()
+    If $iMeasureId <> -1 Then
+        Local $sErrorMsg = "AutoIt script closed while measure was still active."
+        Local $sMeasureError = AppmonitorGetMeasureError()
+        If $sMeasureError <> "" Then
+            $sErrorMsg = $sErrorMsg & " Last error: " & $sMeasureError & "."
+        EndIf
+        AppmonitorFailMeasure($sErrorMsg, $iMeasureId)
     EndIf
 EndFunc
+OnAutoItExitRegister("__AppminotorShutdownMeasure")

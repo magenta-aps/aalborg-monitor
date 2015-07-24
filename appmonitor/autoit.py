@@ -4,6 +4,7 @@ import subprocess
 from django.conf import settings
 from django import db
 from appmonitor.models import TestSuite
+import django
 
 # Compiles and runs an autoit script in the context of the specified test run
 def run_autoit_script(script_path, test_run = None):
@@ -66,4 +67,5 @@ if __name__ == "__main__":
     if not len(sys.argv) > 1:
         raise Exception("You must specify a script to run")
 
+    django.setup()
     sys.exit(wrap_run_autoit(sys.argv[1]))
