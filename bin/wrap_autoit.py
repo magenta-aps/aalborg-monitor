@@ -50,6 +50,5 @@ if __name__ == "__main__":
     # call the compiled exe file
     result = subprocess.call([exe_file], env=env)
 
-    # Clean up if run was successful
-    if 0 == result:
-        run.finish()
+    # Clean up
+    run.finish(result)

@@ -402,7 +402,7 @@ Func AppmonitorWaitForId(ByRef $oIE, $sID, $iTimeout = 30000)
     ; Set specific errors if we did not find anything
     If (Not IsObj($oFoundObject)) And ($iLookupError == 0) Then
         If TimerDiff($hStartTime) >= $iTimeout Then
-            $sMessage = "Could not find object with ID " & $sID & " withing the specified time"
+            $sMessage = "Could not find object with ID " & $sID & " within the specified time"
             $iLookupError = $_IEStatus_LoadWaitTimeout
         Else
             $sMessage = "Object with id " & $sID & " not found"
