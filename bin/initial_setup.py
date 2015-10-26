@@ -3,6 +3,7 @@ import urllib2
 import zipfile
 import tempfile
 import time
+import platform
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIN_DIR = os.path.join(BASE_DIR, "bin")
@@ -20,6 +21,16 @@ SELENIUM_ZIP_URL = (
 SELENIUM_EXE_FILE = "IEDriverServer.exe"
 SELENIUM_EXE_PATH = os.path.join(BIN_DIR, SELENIUM_EXE_FILE)
 
+ARCH_POSTFIX = ""
+if platform.architecture()[0] == "64bit":
+    ARCH_POSTFIX = "_x64"
+
+SQLITE_DLL_FILE = "sqlite3%s.dll" % (ARCH_POSTFIX)
+SQLITE_DLL_PATH = os.path.join(AUTO_IT_DIR, SQLITE_DLL_FILE)
+SQLITE_DLL_URL = (
+    "https://www.autoitscript.com/autoit3/pkgmgr/sqlite/" +
+    SQLITE_DLL_FILE
+)
 
 def download(url):
     file_name = url.split('/')[-1]
@@ -111,6 +122,21 @@ if __name__ == '__main__':
                 time.sleep(1)
         os.rmdir(tmp_dir)
         os.remove(zip_file_name)
+        print "Done"
+
+    if not os.path.exists(SQLITE_DLL_PATH):
+        print "Downloading and extracting SQLite DLL"
+        download_file_name = download(SQLITE_DLL_URL)
+        while True:
+            try:
+                os.rename(download_file_name, SQLITE_DLL_PATH)
+                break
+            except Exception as e:
+                tries = tries + 1
+                if tries >= 5:
+                    raise e
+                print "Moving files failed, retrying..."
+                time.sleep(1)
         print "Done"
 
     print "Setup complete"
