@@ -18,6 +18,7 @@
 /bin/IEDriverServer.exe
 
 /testsuites/**/*.exe
+/testsuites/**/sqlite3*.dll
 
 /.idea
 /*.sqlite3
