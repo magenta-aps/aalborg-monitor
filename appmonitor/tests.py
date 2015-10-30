@@ -14,9 +14,10 @@ class AppmonitorTestCase(unittest.TestCase):
 
     def appmonitorSetUp(self, filename):
         # Setup internet explorer
-        caps = DesiredCapabilities.INTERNETEXPLORER.copy()
-        caps['ignoreProtectedModeSettings'] = True
-        self.driver = webdriver.Ie(capabilities=caps)
+        #caps = DesiredCapabilities.INTERNETEXPLORER.copy()
+        #caps['ignoreProtectedModeSettings'] = True
+        #self.driver = webdriver.Ie(capabilities=caps)
+        self.driver = webdriver.Ie()
         self.driver.implicitly_wait(30)
         self.verificationErrors = []
         self.accept_next_alert = True

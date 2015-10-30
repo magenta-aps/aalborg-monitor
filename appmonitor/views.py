@@ -1,10 +1,12 @@
 from django.shortcuts import render
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.views.generic import ListView, DetailView, TemplateView
-from appmonitor.models import TestSuite, TestRun
+from appmonitor.models import TestSuite, TestRun, TestMeasure
 from markdown import Markdown
-import os, datetime
+import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter
+import io, os, datetime
 
 markdown_formatter = Markdown(output_format="html5")
 
@@ -74,3 +76,57 @@ class ReadmeView(TemplateView):
 
         return context
 
+class MeasureDataPNGView(ListView):
+    model = TestMeasure
+    allow_empty = False
+
+    def get_queryset(self):
+        qs = self.model.objects.filter(
+            test_run__test_suite__pk = self.kwargs["pk"],
+            name = self.kwargs["mname"],
+            success = 1
+        ).order_by("started", "ended")
+        return qs
+
+    def get(self, request, *args, **kwargs):
+        dates = []
+        measures = []
+
+        max_measure = 0
+        items = self.get_queryset()
+
+        if len(items) == 0:
+            raise Http404("No data")
+
+        for item in items:
+            dates.append(item.started)
+            diff = (item.ended - item.started).total_seconds()
+            measures.append(diff)
+            if diff > max_measure:
+                max_measure = diff
+        
+        now = datetime.datetime.now()
+        
+        fig, ax = plt.subplots()
+        ax.plot_date(dates, measures, '-')
+
+        ax.xaxis.set_major_formatter(DateFormatter("%Y-%m-%d %H:%M"))
+        ax.set_ylim(bottom = 0, top = max_measure + 1)
+        ax.set_xlim(
+            dates[0] - datetime.timedelta(minutes = 15),
+            dates[-1] + datetime.timedelta(minutes = 15)
+        )
+        ax.grid(True)
+        
+        fig.autofmt_xdate()
+        
+        buf = io.BytesIO()
+        
+        fig.savefig(buf, format='png')
+        buf.seek(0)
+
+        response = HttpResponse(
+            buf,
+            'image/png'
+        )
+        return response

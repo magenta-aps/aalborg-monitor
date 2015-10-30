@@ -25,7 +25,7 @@ class SeleniumTest(AppmonitorTestCase):
         self.start_measure("Naviger til login")
         accountElem.find_element_by_css_selector("a.login").click()
         self.driver.implicitly_wait(2)
-        unameElem = driver.find_element_by_id("usernameasdf")
+        unameElem = driver.find_element_by_id("username")
         self.end_measure()
     
     def is_element_present(self, how, what):
@@ -49,9 +49,5 @@ class SeleniumTest(AppmonitorTestCase):
             return alert_text
         finally: self.accept_next_alert = True
     
-    def tearDown(self):
-        self.driver.quit()
-        self.assertEqual([], self.verificationErrors)
-
 if __name__ == "__main__":
     unittest.main()
