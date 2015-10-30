@@ -8,6 +8,7 @@
 /src/*.egg-info
 /lib/*
 !/lib/autoit
+!/lib/*.whl
 /lib/autoit/*.exe
 /lib64
 
