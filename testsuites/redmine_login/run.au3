@@ -2,12 +2,8 @@
 
 ; Utility methods
 
-Local $oIE
-Local $hDbConnection = AppmonitorConnectDb()
-Local $iRunId = AppmonitorGetRun($hDbConnection)
-
 ; Actual test-case
-local $iMeasureID = CreateMeasure($hDbConnection, $iRunId, "Start IE")
+AppmonitorCreateMeasure("Start IE")
 $oIE = _IECreate("https://redmine.magenta-aps.dk/")
 If @error Then
     Exit @error
@@ -16,23 +12,22 @@ EndIf
 ; Shut down IE when program exits
 AppmonitorRegisterIEShutdown($oIE)
 
-Local $oAccountDiv = WaitForId($oIE, "account")
-AppmonitorCheckError(@error)
-CompleteMeasure($hDbConnection, $iMeasureID)
-
+Local $oAccountDiv = AppmonitorWaitForId($oIE, "account")
+AppmonitorCheckCurrentMeasure(@error)
 Local $oLinkElem = _IETagNameGetCollection($oAccountDiv, "a").Item(0)
-AppmonitorCheckError(@error)
+AppmonitorCheckCurrentMeasure(@error)
+AppmonitorCompleteMeasure()
 
-$iMeasureID = CreateMeasure($hDbConnection, $iRunId, "Navigate to login page")
+AppmonitorCreateMeasure("Navigate to login page")
 _IEAction($oLinkElem, "click")
-AppmonitorCheckError(@error)
+AppmonitorCheckCurrentMeasure(@error)
 
 _IELoadWait ($oIE)
-AppmonitorCheckError(@error)
+AppmonitorCheckCurrentMeasure(@error)
 
 Local $oUsernameField = _IEGetObjById($oIE, "username")
-AppmonitorCheckError(@error)
-CompleteMeasure($hDbConnection, $iMeasureID)
+AppmonitorCheckCurrentMeasure(@error)
+AppmonitorCompleteMeasure()
 
 ConsoleWrite("Success!" & @CRLF)
 _IEQuit($oIE)

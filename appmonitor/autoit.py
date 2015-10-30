@@ -5,6 +5,16 @@ from django.conf import settings
 from django import db
 from appmonitor.models import TestSuite
 import django
+import platform
+import shutil
+
+ARCH_POSTFIX = ""
+if platform.architecture()[0] == "64bit":
+    ARCH_POSTFIX = "_x64"
+
+
+SQLITE_DLL = "sqlite3%s.dll" % ARCH_POSTFIX
+AU2EXE = "Aut2Exe%s.exe" % ARCH_POSTFIX
 
 # Compiles and runs an autoit script in the context of the specified test run
 def run_autoit_script(script_path, test_run = None):
@@ -33,9 +43,11 @@ def run_autoit_script(script_path, test_run = None):
     if os.path.getmtime(script_file) > exe_timestamp:
         aut2exe_file = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "AutoIT", "Aut2Exe", "Aut2Exe.exe"
+            "AutoIT", "Aut2Exe", AU2EXE
         )
-        sys.stderr.write("Compiling %s => %s%s" % (script_file, exe_file, os.linesep))
+        sys.stderr.write(
+            "Compiling %s => %s%s" % (script_file, exe_file, os.linesep)
+        )
         result = subprocess.call([
             aut2exe_file,
             "/in", script_file,
@@ -44,6 +56,15 @@ def run_autoit_script(script_path, test_run = None):
         ])
         if result != 0:
             return result
+
+    # Copy in SQLite DLL if needed
+    sqlite_file = os.path.join(os.path.dirname(script_file), SQLITE_DLL)
+    if not os.path.exists(sqlite_file):
+        src_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "AutoIT", SQLITE_DLL
+        )
+        shutil.copyfile(src_file, sqlite_file)
 
     # call the compiled exe file
     return subprocess.call([exe_file], env=env)
