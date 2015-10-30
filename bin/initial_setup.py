@@ -140,16 +140,4 @@ if __name__ == '__main__':
                 time.sleep(1)
         print "Done"
 
-    # Install nympy if it is missing
-    try:
-        import numpy
-    except ImportError:
-        whl = 'numpy-1.10.1+mkl-cp27-none-%s.whl' % (
-            'win_amd64' if '_x64' == ARCH_POSTFIX else 'win32'
-        )
-        subprocess.call([
-            'pip.exe',
-            'install',
-            os.path.join(BASE_DIR, "lib", whl)
-        ]);
     print "Setup complete"
