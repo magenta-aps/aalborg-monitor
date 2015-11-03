@@ -23,6 +23,7 @@
 
 /.idea
 /*.sqlite3
+/*.whl
 .komodotools
 *.komodoproject
 *.pyc
