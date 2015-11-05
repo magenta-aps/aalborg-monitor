@@ -1,0 +1,29 @@
+{% extends "base_layout.html" %}
+{% load l10n %}
+
+{% block title %}README{% endblock %}
+
+{% block breadcrumbs %}
+    {% if subentry %}
+    <li><a href="{% url 'appmonitor:documentation' %}">Dokumentation</a></li>
+    <li>{{ subentry|slice:"4:" }}</li>
+    {% else %}
+    <li>Dokumentation</li>
+    {% endif %}
+{% endblock %}
+
+{% block menuitems %}
+<li><a href="{% url 'appmonitor:documentation' %}">README</a></li>
+
+{% for menuitem in menuitems %}
+<li><a href="{% url 'appmonitor:documentation' menuitem %}"
+    >{{ menuitem|slice:"4:" }}</a></li>
+{% endfor %}
+{% endblock %}
+
+
+{% block content %}
+<div>
+{{ markdown_html |safe }}
+</div>
+{% endblock %}

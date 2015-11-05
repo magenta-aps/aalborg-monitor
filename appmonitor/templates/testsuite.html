@@ -61,6 +61,32 @@
 </div>
 
 <div>
+
+<h2>Resultat-overblik</h2>
+<table class="table table-bordered table-striped table-hover">
+    <thead>
+        <tr class="info">
+            <th>Måling</th>
+            <th class="text-right">Antal målinger</th>
+            <th class="text-right">Antal fejlede</th>
+            <th class="text-right">Gennemsnitlig brugt tid</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for entry in testsuite.test_data %}
+        <tr class="{{ entry.class }}">
+            <td class="primary"><a
+                href="{% url 'appmonitor:png' testsuite.pk entry.name %}"
+                onclick="this.target='_blank'"
+                >{{ entry.name }}</a></td>
+            <td class="text-right">{{ entry.total }}</td>
+            <td class="text-right">{{ entry.failures }}</td>
+            <td class="text-right">{{ entry.avg_time|floatformat:4 }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
 <h2>Afviklede tests</h2>
 <table class="table table-bordered table-striped table-hover table-clickablerows">
     <thead>
@@ -97,28 +123,6 @@
                    ><span class="glyphicon glyphicon-list-alt"></span
                 ></a>
             </td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
-
-<h2>Resultat-overblik</h2>
-<table class="table table-bordered table-striped table-hover">
-    <thead>
-        <tr class="info">
-            <th>Måling</th>
-            <th class="text-right">Antal målinger</th>
-            <th class="text-right">Antal fejlede</th>
-            <th class="text-right">Gennemsnitlig brugt tid</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for entry in testsuite.test_data %}
-        <tr class="{{ entry.class }}">
-            <td class="primary">{{ entry.name }}</td>
-            <td class="text-right">{{ entry.total }}</td>
-            <td class="text-right">{{ entry.failures }}</td>
-            <td class="text-right">{{ entry.avg_time|floatformat:4 }}</td>
         </tr>
     {% endfor %}
     </tbody>
