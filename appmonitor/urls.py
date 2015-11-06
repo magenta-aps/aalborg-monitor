@@ -1,15 +1,18 @@
 from django.conf.urls import url
 from appmonitor.views import TestSuiteList, TestSuiteDetailView
-from appmonitor.views import TestSuiteDownloadView, MeasureDataPNGView
+from appmonitor.views import TestSuiteDownloadView, MeasureView, MeasurePNGView
 from appmonitor.views import TestRunDetailView, DocumentationView
 
 urlpatterns = [
     url(r'^$',
         TestSuiteList.as_view(),
         name="index"),
-    url(r'^testsuite/(?P<pk>[0-9]+)/(?P<mname>[^/]+)/?',
-        MeasureDataPNGView.as_view(),
+    url(r'^testsuite/(?P<pk>[0-9]+)/(?P<mname>[^/]+).png/?',
+        MeasurePNGView.as_view(),
         name="png"),
+    url(r'^testsuite/(?P<pk>[0-9]+)/(?P<mname>[^/]+)/?',
+        MeasureView.as_view(),
+        name="measure"),
     url(r'^testsuite/(?P<pk>[0-9]+)/download/?',
         TestSuiteDownloadView.as_view(),
         name="testsuite_download"),

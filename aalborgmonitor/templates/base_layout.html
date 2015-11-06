@@ -72,5 +72,6 @@
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="{% static "appmonitor/simple-sidebar/js/bootstrap.js" %}"></script>
     <script src="{% static "appmonitor/main.js" %}"></script>
+    {% block bodyend_scripts %}{% endblock %}
   </body>
 </html>

@@ -1,13 +1,11 @@
+# -*- coding: utf-8 -*-
 from django.shortcuts import render
 from django.conf import settings
 from django.http import HttpResponse, Http404
-from django.views.generic import ListView, DetailView, TemplateView
+from django.views.generic import ListView, DetailView, TemplateView, View
 from appmonitor.models import TestSuite, TestRun, TestMeasure
 from markdown import Markdown
-import matplotlib.pyplot as plt
-from matplotlib.dates import DateFormatter
-import io, os, datetime
-import glob
+import io, os, datetime, sys, glob, subprocess, locale, json
 
 markdown_formatter = Markdown(output_format="html5")
 
@@ -91,57 +89,65 @@ class DocumentationView(TemplateView):
 
         return context
 
-class MeasureDataPNGView(ListView):
-    model = TestMeasure
-    allow_empty = False
+class MeasureView(TemplateView):
+    template_name = 'measure.html'
 
-    def get_queryset(self):
-        qs = self.model.objects.filter(
-            test_run__test_suite__pk = self.kwargs["pk"],
-            name = self.kwargs["mname"],
-            success = 1
-        ).order_by("started", "ended")
-        return qs
+    def get_context_data(self, **kwargs):
+        context = super(MeasureView, self).get_context_data(**kwargs)
 
+        context['testsuite'] = TestSuite.objects.get(pk=kwargs['pk'])
+        context['mname'] = kwargs['mname']
+        context['t'] = self.request.GET.get("t", "")
+        context['cmp'] = self.request.GET.get("cmp", "")
+        context['cmp_ts'] = self.request.GET.get("cmp_ts", "")
+        
+        cmp_data = []
+        qs = TestMeasure.objects.exclude(
+            test_run__test_suite__name="DEBUG"
+        ).values(
+            "test_run__test_suite__pk",
+            "test_run__test_suite__name",
+            "name"
+        ).order_by(
+            "test_run__test_suite__name",
+            "name"
+        ).distinct()
+        for m in qs:
+            if (len(cmp_data) == 0 or
+                cmp_data[-1]["pk"] != m["test_run__test_suite__pk"]):
+                cmp_data.append({
+                    "pk": m["test_run__test_suite__pk"],
+                    "name": m["test_run__test_suite__name"],
+                    "items": []
+                })
+            cmp_data[-1]["items"].append(
+                '%s/%s' % (m["test_run__test_suite__pk"], m["name"])
+            )
+        context["cmp_data"] = cmp_data
+        context["cmp_data_json"] = json.dumps(cmp_data)
+
+        return context
+
+class MeasurePNGView(View):
     def get(self, request, *args, **kwargs):
-        dates = []
-        measures = []
-
-        max_measure = 0
-        items = self.get_queryset()
-
-        if len(items) == 0:
-            raise Http404("No data")
-
-        for item in items:
-            dates.append(item.started)
-            diff = (item.ended - item.started).total_seconds()
-            measures.append(diff)
-            if diff > max_measure:
-                max_measure = diff
-        
-        now = datetime.datetime.now()
-        
-        fig, ax = plt.subplots()
-        ax.plot_date(dates, measures, '-')
-
-        ax.xaxis.set_major_formatter(DateFormatter("%Y-%m-%d %H:%M"))
-        ax.set_ylim(bottom = 0, top = max_measure + 1)
-        ax.set_xlim(
-            dates[0] - datetime.timedelta(minutes = 15),
-            dates[-1] + datetime.timedelta(minutes = 15)
-        )
-        ax.grid(True)
-        
-        fig.autofmt_xdate()
-        
-        buf = io.BytesIO()
-        
-        fig.savefig(buf, format='png')
-        buf.seek(0)
-
-        response = HttpResponse(
-            buf,
-            'image/png'
-        )
-        return response
+        os_encoding = locale.getpreferredencoding()
+        cmd = [
+            "python.exe",
+            os.path.join(settings.BASE_DIR, "bin", "plot_png.py"),
+            kwargs["pk"],
+            kwargs["mname"],
+            request.GET.get("t", ""),
+        ]
+        cmp_str = request.GET.get("cmp", None)
+        if cmp_str:
+            for x in cmp_str.split("/", 1):
+                cmd.append(x)
+        cmd = [unicode(x).encode(os_encoding) for x in cmd]
+        fname = subprocess.check_output(cmd).strip()
+        if fname and fname != "":
+            f = open(fname.decode(os_encoding), 'rb')
+            response = HttpResponse(f.read(), 'image/png')
+            f.close()
+            return response
+        else:
+            raise Http404("Image not found")

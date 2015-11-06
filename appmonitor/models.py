@@ -85,7 +85,7 @@ class TestSuite(models.Model):
 
     def failed_tests(self):
         return self.testrun_set.filter(
-            Q(exitstatus=0) | Q(exitstatus=None)
+            ~Q(exitstatus=0) | Q(exitstatus=None)
         )
 
     def failed_pct(self):
