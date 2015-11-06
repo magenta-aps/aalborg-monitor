@@ -552,6 +552,27 @@ Func AppmonitorDigitalSignaturLogin($sWindowTitle = "DUBU Logon - Internet Explo
     Return True
 EndFunc
 
+Func AppmonitorIEMoveMouseToObj(ByRef $oObject)
+   Local $iWidth = _IEPropertyGet($oObject, "width")
+   If Not IsInt($iWidth) Or $iWidth == 0 Then
+	  $iWidth = 2
+   EndIf
+   Local $iHeight = _IEPropertyGet($oObject, "height")
+   If Not IsInt($iHeight) Or $iHeight == 0 Then
+	  $iHeight = 2
+   EndIf
+   Local $iX = _IEPropertyGet($oObject, "screenx")
+   ConsoleWrite("X: " & $iX & @CRLF)
+   $iX += Int($iWidth / 2)
+   ConsoleWrite("X: " & $iX & @CRLF)
+   Local $iY = _IEPropertyGet($oObject, "screeny")
+   ConsoleWrite("Y: " & $iY & @CRLF)
+   $iY += Int($iHeight / 2)
+   ConsoleWrite("Y: " & $iY & @CRLF)
+
+   MouseMove($iX, $iY)
+EndFunc
+
 ; Methods for handling proper shutdown of IE
 Func AppmonitorIEReattach($sString, $sMode = "title", $iInstance = 1)
     Local $hIEAttachStart = TimerInit()

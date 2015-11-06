@@ -1,8 +1,0 @@
-* Download and install lastest python 2.7 .MSI from https://www.python.org/downloads/windows/
-* Install virtualenv and activate
-* Install django:
- - pip install django
-* Install database tables:
-  - python manage.py migrate
-* Install a superuser:
-  - python manage.py createsuperuser

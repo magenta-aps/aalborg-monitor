@@ -1,7 +1,7 @@
 from django.conf.urls import url
 from appmonitor.views import TestSuiteList, TestSuiteDetailView
 from appmonitor.views import TestSuiteDownloadView, MeasureDataPNGView
-from appmonitor.views import TestRunDetailView, ReadmeView
+from appmonitor.views import TestRunDetailView, DocumentationView
 
 urlpatterns = [
     url(r'^$',
@@ -9,7 +9,7 @@ urlpatterns = [
         name="index"),
     url(r'^testsuite/(?P<pk>[0-9]+)/(?P<mname>[^/]+)/?',
         MeasureDataPNGView.as_view(),
-        name="testsuite_download"),
+        name="png"),
     url(r'^testsuite/(?P<pk>[0-9]+)/download/?',
         TestSuiteDownloadView.as_view(),
         name="testsuite_download"),
@@ -19,7 +19,10 @@ urlpatterns = [
     url(r'^testrun/(?P<pk>[0-9]+)/?',
         TestRunDetailView.as_view(),
         name="testrun"),
-    url(r'^readme/?',
-        ReadmeView.as_view(),
-        name="readme")
+    url(r'^documentation/(?P<fname>[^/]+)/?',
+        DocumentationView.as_view(),
+        name="documentation"),
+    url(r'^documentation/?',
+        DocumentationView.as_view(),
+        name="documentation")
 ]

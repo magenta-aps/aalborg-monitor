@@ -7,6 +7,7 @@ from markdown import Markdown
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 import io, os, datetime
+import glob
 
 markdown_formatter = Markdown(output_format="html5")
 
@@ -63,15 +64,29 @@ class TestRunDetailView(DetailView):
         return context
 
 
-class ReadmeView(TemplateView):
-    template_name = 'readme.html'
+class DocumentationView(TemplateView):
+    template_name = 'documentation.html'
 
     def get_context_data(self, **kwargs):
-        context = super(ReadmeView, self).get_context_data(**kwargs)
+        context = super(DocumentationView, self).get_context_data(**kwargs)
 
-        f = open(os.path.join(settings.BASE_DIR, "README.md"))
+        doc_dir = os.path.join(settings.BASE_DIR, "doc")
+        menuitems = glob.glob(os.path.join(doc_dir, "*.md"))
+        context['menuitems'] = [
+            os.path.basename(x).decode("latin-1")[:-3] for x in menuitems
+        ]
+
+        md_file = os.path.join(settings.BASE_DIR, "README.md")
+        if "fname" in kwargs:
+            md_file = os.path.join(doc_dir, kwargs["fname"] + ".md")
+            context['subentry'] = kwargs["fname"]
+
+        if not os.path.exists(md_file):
+            raise Http404("Documentation not found")
+        
+        f = open(md_file)
         context['markdown_html'] = markdown_formatter.convert(
-            f.read()
+            f.read().decode('utf8')
         )
 
         return context

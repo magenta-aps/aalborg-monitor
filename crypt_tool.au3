@@ -1,6 +1,6 @@
 #include <GUIConstantsEx.au3>
 #include <EditConstants.au3>
-#include "testsuites/autoit_include/appmonitor.au3"
+#include "lib/autoit/appmonitor.au3"
 
 Opt("GUIOnEventMode", 1) ; Change to OnEvent mode
 
