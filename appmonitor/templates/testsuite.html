@@ -76,8 +76,7 @@
     {% for entry in testsuite.test_data %}
         <tr class="{{ entry.class }}">
             <td class="primary"><a
-                href="{% url 'appmonitor:png' testsuite.pk entry.name %}"
-                onclick="this.target='_blank'"
+                href="{% url 'appmonitor:measure' testsuite.pk entry.name %}"
                 >{{ entry.name }}</a></td>
             <td class="text-right">{{ entry.total }}</td>
             <td class="text-right">{{ entry.failures }}</td>
