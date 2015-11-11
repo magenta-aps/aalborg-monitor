@@ -1,0 +1,74 @@
+{% extends "base_layout.html" %}
+{% load l10n %}
+
+{% block title %}Måling '{{ mname }}'{% endblock %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url 'appmonitor:testsuite' testsuite.pk %}">{{ testsuite.name }}</a></li>
+    <li>Måling '{{ mname }}'</li>
+{% endblock %}
+
+
+{% block content %}
+<h1>Måling '{{ mname }}'</h1>
+<div>
+    <form action="" method="get">
+        <label for="target_input">Indsæt målsætnings-linie ved:</label>
+        <input id="target_input" type="number" class="form-control"  step="0.1"
+               name="t" value="{{t|default:"1"}}"/>
+        <h3>Sammenlign med:</h3>
+        <div>
+            <label for="cmp_ts">Testsuite:</label>
+            <select id="cmp_ts" name="cmp_ts" data-selected="{{cmp_ts}}">
+                <option value="">[Vælg testsuite]</option>
+                {% for ts in cmp_data %}
+                <option value="{{ ts.pk }}">{{ ts.name }}</option>
+                {% endfor %}
+            </select>
+            <label for="cmp_measure">Måling:</label>
+            <select id="cmp_measure" name="cmp" data-selected="{{ cmp }}">
+            </select>
+        </div>
+        <input type="submit" value="Opdater" />
+    </form>
+</div>
+<div>
+    <img src="{% url 'appmonitor:png' testsuite.pk mname %}?t={{t}}&cmp={{cmp}}"
+         width="800" height="600" />
+</div>
+{% endblock %}
+{% block bodyend_scripts %}
+<script type="text/javascript"><!--
+(function($) {
+    var cmp_data = {{ cmp_data_json|safe }};
+    var cmp_map = {}
+    $.each(cmp_data, function() {
+        cmp_map[this.pk] = this.items;
+    });
+    $("#cmp_ts").on("change", function() {
+        var $this = $(this), new_val = $this.val(),
+            mselect = $('#cmp_measure').get(0),
+            opts = mselect.options;
+
+        // Clear existing values
+        while(opts.length > 0)
+            opts[0] = null;
+        if (new_val == "") {
+            opts[opts.length] = new Option("[Vælg testsuite først]", "")
+        } else {
+            opts[opts.length] = new Option("[Vælg måling]", "")
+            $.each(cmp_map[new_val], function() {
+                opts[opts.length] = new Option(
+                    this.replace(/^.+\//, ""), this
+                );
+            });
+        }
+    });
+    $(function() {
+        $("#cmp_ts").val($("#cmp_ts").attr("data-selected"));
+        $("#cmp_ts").trigger("change");
+        $("#cmp_measure").val($("#cmp_measure").attr("data-selected"));
+    });
+})(jQuery)
+//--></script>
+{% endblock %}
