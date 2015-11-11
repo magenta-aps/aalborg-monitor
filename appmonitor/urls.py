@@ -22,7 +22,7 @@ urlpatterns = [
     url(r'^testrun/(?P<pk>[0-9]+)/?',
         TestRunDetailView.as_view(),
         name="testrun"),
-    url(r'^documentation/(?P<fname>[^/]+)/?',
+    url(r'^documentation/(?P<fname>[^/]+?)(\.md)?/?$',
         DocumentationView.as_view(),
         name="documentation"),
     url(r'^documentation/?',

@@ -18,3 +18,11 @@ python installationen, og derefter afvikle `initial_setup.bat`.
 Hvis du skal bruge Selenium-baserede tests vil det være nødvendigt at sætte
 internet explorer op til at have samme sikkerhedsniveau for alle
 sikkerhedszoner.
+
+## Aalborg-specifik opsætning
+
+Bemærk at det for at få de medfølgende Aalborg-tests til at virke vil være
+nødvendigt at angive nogen konfigurationsnøgler der bruges i forbindelse med
+tests'ene. Se
+[hjælp for Konfigurations-værdier](050_Konfigurations-værdier.md)
+for hvordan dette håndteres.
