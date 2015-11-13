@@ -447,24 +447,20 @@ Func AppmonitorMouseMoveAppletControl($hWnd, $sText, $hButton)
     MouseMove($winPosData[0] + $posData[0] + $posData[2] / 2, $winPosData[1] + $posData[1] + $posData[3] / 2, 0)
 EndFunc
 
-Func AppmonitorControlWait($hWnd, $sText, $hButton, $iTimeout = 30)
+Func AppmonitorControlWait($hWnd, $sText, $hButton, $iTimeout = 30000)
     Local $hWaitStart = TimerInit()
-    Local $fTimeout = $iTimeout * 1000
-    Local $iErrorValue = 0
     Local $hResult
 
-    While TimerDiff($hWaitStart) < $fTimeout
-        $hResult = ControlGetHandle($hWnd, "", $hButton)
+    While TimerDiff($hWaitStart) < $iTimeout
+        $hResult = ControlGetHandle($hWnd, $sText, $hButton)
         If $hResult Then
-            ExitLoop
+			Return SetError(0, 0, $hResult)
         EndIf
         Sleep(200)
     WEnd
-    If TimerDiff($hWaitStart) >= $fTimeout Then
-        $iErrorValue = $_IEStatus_LoadWaitTimeout
-    EndIf
 
-    Return SetError($iErrorValue, @extended, $hResult)
+	ConsoleWriteError("Failed to locate button " & $hButton & @CRLF)
+    Return SetError($_IEStatus_LoadWaitTimeout, 0, $hResult)
 EndFunc
 
 Func AppmonitorDigitalSignaturLogin($sWindowTitle = "DUBU Logon - Internet Explorer")
@@ -478,87 +474,88 @@ Func AppmonitorDigitalSignaturLogin($sWindowTitle = "DUBU Logon - Internet Explo
     Local $sPassword = AppmonitorDecrypt($sEncryptedPassword)
 
     ConsoleWriteError("Locating IE with login page" & @CRLF)
-    Local $oIEWin = WinWaitActive("[TITLE:" & $sWindowTitle & "; CLASS:IEFrame]", "", 5)
+    Local $oIEWin = WinWait("[TITLE:" & $sWindowTitle & "; CLASS:IEFrame]", "", 5)
     If @error Then
+		Local $iError = @error
         AppmonitorSetMeasureError("Failed to locate IE login page")
-        Return SetError(@error, @extended)
+        Return SetError($iError, @extended)
     EndIf
 
     ConsoleWriteError("Locate applet OK button" & @CRLF)
     Local $hControlButton = AppmonitorControlWait($oIEWin, "", "[CLASS:Button; INSTANCE:2]")
     If @error Then
+		Local $iError = @error
+		ConsoleWriteError("Button not found " & $iError & @CRLF)
         AppmonitorSetMeasureError("Failed to locate applet OK button")
-        Return SetError(@error, @extended)
+        Return SetError($iError, @extended)
     EndIf
 
-    ConsoleWriteError("Activating window" & @CRLF)
-    WinActivate($oIEWin)
-    If @error Then
-        AppmonitorSetMeasureError("Failed to make IE window active")
-        Return SetError(@error, @extended)
-    EndIf
+	ConsoleWriteError("Locate IE window control" & @CRLF)
+	Local $hIEWindowControl = ControlGetHandle($oIEWin, "", "[CLASS:SunAwtCanvas; INSTANCE:2]")
+	ConsoleWriteError("Located IE window control: " & $hIEWindowControl & @CRLF)
 
-    ConsoleWriteError("Move mouse to OK button" & @CRLF)
-    AppmonitorMouseMoveAppletControl($oIEWin, "", $hControlButton)
-    If @error Then
-        AppmonitorSetMeasureError("Failed to move mouse to OK button")
-        Return SetError(@error, @extended)
-    EndIf
+	Sleep(1000)
 
     ConsoleWriteError("Click OK button" & @CRLF)
-    ControlClick($oIEWin, "", $hControlButton, "primary")
+    ControlSend($oIEWin, "", $hIEWindowControl, "{TAB}")
     If @error Then
-        AppmonitorSetMeasureError("Failed to click on OK button")
-        Return SetError(@error, @extended)
+		Local $iError = @error
+        AppmonitorSetMeasureError("Failed to send first tab to applet")
+        Return SetError($iError, @extended)
+    EndIf
+	Sleep(100)
+    ControlSend($oIEWin, "", $hIEWindowControl, "{TAB}")
+    If @error Then
+		Local $iError = @error
+        AppmonitorSetMeasureError("Failed to send second tab to applet")
+        Return SetError($iError, @extended)
+    EndIf
+	Sleep(100)
+    ControlSend($oIEWin, "", $hIEWindowControl, "{ENTER}")
+    If @error Then
+		Local $iError = @error
+        AppmonitorSetMeasureError("Failed to send enter to applet")
+        Return SetError($iError, @extended)
     EndIf
 
     ConsoleWriteError("Locate password dialog" & @CRLF)
     Local $hWndDialog = WinWait("[TITLE:Adgang til signaturcentralen]", "", 10)
     If @error Then
+		Local $iError = @error
         AppmonitorSetMeasureError("Failed to find dialog with password input")
-        Return SetError(@error, @extended)
-    EndIf
-
-    ConsoleWriteError("Activate password dialog window" & @CRLF)
-    WinActivate($hWndDialog)
-    If @error Then
-        AppmonitorSetMeasureError("Failed to activate the dialog password dialog window")
-        Return SetError(@error, @extended)
-    EndIf
+        Return SetError($iError, @extended)
+	EndIf
 
     ConsoleWriteError("Locate text input in password dialog" & @CRLF)
     Local $hTextInput = AppmonitorControlWait($hWndDialog, "", "[CLASS:Edit; INSTANCE:1]")
     If @error Then
+		Local $iError = @error
         AppmonitorSetMeasureError("Failed to find password input field")
-        Return SetError(@error, @extended)
+        Return SetError($iError, @extended)
     EndIf
 
     ConsoleWriteError("Input password" & @CRLF)
     ControlSend($hWndDialog, "", $hTextInput, $sPassword)
     If @error Then
+		Local $iError = @error
         AppmonitorSetMeasureError("Failed to input the password")
-        Return SetError(@error, @extended)
+        Return SetError($iError, @extended)
     EndIf
 
     ConsoleWriteError("Locate password OK button" & @CRLF)
     Local $hDlgOKButton = ControlGetHandle($hWndDialog, "", "[CLASS:Button; INSTANCE:1]")
     If @error Then
+		Local $iError = @error
         AppmonitorSetMeasureError("Failed to locate the OK button")
-        Return SetError(@error, @extended)
-    EndIf
-
-    ConsoleWriteError("Move mouse to password OK button" & @CRLF)
-    AppmonitorMouseMoveAppletControl($hWndDialog, "", $hDlgOKButton)
-    If @error Then
-        AppmonitorSetMeasureError("Failed to move mouse to password OK button")
-        Return SetError(@error, @extended)
+        Return SetError($iError, @extended)
     EndIf
 
     ConsoleWriteError("Click password OK button" & @CRLF)
     ControlClick($hWndDialog, "", $hDlgOKButton, "primary")
     If @error Then
+		Local $iError = @error
         AppmonitorSetMeasureError("Failed to click on the password OK button")
-        Return SetError(@error, @extended)
+        Return SetError($iError, @extended)
     EndIf
 
     Return True
