@@ -59,7 +59,7 @@
             opts[opts.length] = new Option("[Vælg måling]", "")
             $.each(cmp_map[new_val], function() {
                 opts[opts.length] = new Option(
-                    this.replace(/^.+\//, ""), this
+                    this.replace(/^.+\//, ""), escape(this)
                 );
             });
         }
