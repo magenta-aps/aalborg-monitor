@@ -48,5 +48,7 @@ class Command(BaseCommand):
             raise CommandError('Error write to file "%s"' % filename)
 
         self.stdout.write(
-            'Wrote XLS data for TestSuite "%s" to %s' % (str(suite), filename)
+            'Wrote XLS data for TestSuite "%s" to %s' % (
+                unicode(suite), filename
+            )
         )
