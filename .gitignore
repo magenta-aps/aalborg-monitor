@@ -18,12 +18,19 @@
 /AutoIT
 /bin/IEDriverServer.exe
 
+/testsuites/development
 /testsuites/**/*.exe
 /testsuites/**/sqlite3*.dll
+/testsuites/**/*.err
+/testsuites/**/*.msg
 
 /.idea
 /*.sqlite3
 /*.whl
+
+sqlite3.dll
+sqlite3_x64.dll
+
 .komodotools
 *.komodoproject
 *.pyc

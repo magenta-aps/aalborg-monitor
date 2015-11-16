@@ -29,8 +29,16 @@ class SeleniumExport(AppmonitorTestCase):
         self.end_measure()
 
         self.start_measure("Input søgestreng")
-        nextElem.clear()
-        nextElem.send_keys("aalborg kommune")
+        driver.execute_script("""
+                document.getElementById('%s').setAttribute(
+                'value',
+                '%s')
+            """ % (
+                "lst-ib",
+                "aalborg kommune"
+            )
+        );
+        nextElem.send_keys("\n")
         nextElem = driver.find_element_by_link_text("Aalborg Kommune: Borger")
         self.end_measure()
         
