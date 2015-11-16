@@ -38,7 +38,7 @@ AppmonitorCheckError(@error)
 
 _IEFormElementSetValue($oSearchInput, "aalborg kommune")
 AppmonitorCheckError(@error)
-Send("{ENTER}")
+_IEFormSubmit($oForm)
 AppmonitorCheckError(@error)
 AppmonitorWaitForId($oIE, "ires")
 AppmonitorCheckError(@error)
