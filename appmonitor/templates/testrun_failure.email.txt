@@ -1,5 +1,5 @@
 {% autoescape off %}\
-Denne mail er sendt til følgende personer:
+Denne mail er sendt fra {{ systemname }} til følgende personer:
 
 {% for p in contactpersons %}\
 * {{ p.full_name }} <{{ p.email }}>

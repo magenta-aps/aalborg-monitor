@@ -21,7 +21,7 @@ from django.template.loader import get_template
 from email.mime.text import MIMEText
 from email.utils import parseaddr
 
-import os, io, xlwt, csv
+import os, io, xlwt, csv, platform
 
 # Create your models here.
 
@@ -397,7 +397,8 @@ class TestRun(models.Model):
                 'testrun': self,
                 'testsuite': self.test_suite,
                 'contactpersons': contactpersons,
-                'measure': measure
+                'measure': measure,
+                'systemname': platform.node()
             }
             content = template.render(context)
             content = content.replace("\\\r\n", "").replace("\\\n", "")
