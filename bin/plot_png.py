@@ -106,7 +106,9 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
     fig.autofmt_xdate()
 
     fname = u"_".join([
-        unicode(x) for x in [pk, mname, cmp_pk, cmp_mname, targetvalue] if x
+        unicode(x).replace("/", "_") for x in [
+            pk, mname, cmp_pk, cmp_mname, targetvalue
+        ] if x
     ]) + ".png"
 
     full_path_fname = os.path.join(settings.STATIC_ROOT, "plots", fname)

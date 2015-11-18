@@ -129,7 +129,7 @@ class TestSuite(models.Model):
                     for n in names[current_idx + 1:]:
                         indexes[n] += 1
 
-                # Next index is one higher that the index of the current
+                # Next index is one higher than the index of the current
                 # element, unless that index is less than the current one
                 if indexes[m.name] >= current_idx:
                     current_idx = indexes[m.name] + 1
