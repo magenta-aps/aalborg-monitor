@@ -15,9 +15,11 @@ from django.conf import settings
 from appmonitor.models import TestMeasure
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
+from django.utils import timezone
 import io, os, datetime, sys, django, locale
 
 def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
+    timezone.activate(timezone.get_current_timezone())
     if not (pk and mname):
         raise Exception("You must specify at least two command line args")
     django.setup()
@@ -42,7 +44,7 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
     fig, ax = plt.subplots()
 
     for item in items:
-        dates.append(item.started)
+        dates.append(timezone.make_naive(item.started))
         diff = (item.ended - item.started).total_seconds()
         measures.append(diff)
         if diff > max_measure:
@@ -68,7 +70,7 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
             dates2 = []
             measures2 = []
             for item in cmp_items:
-                dates2.append(item.started)
+                dates2.append(timezone.make_naive(item.started))
                 diff = (item.ended - item.started).total_seconds()
                 measures2.append(diff)
                 if diff > max_measure:
