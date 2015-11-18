@@ -92,7 +92,7 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
             max_measure = targetvalue
 
     # Plot the legends
-    ax.legend(numpoints = 1)
+    ax.legend(numpoints = 1, loc='upper left')
 
     # Configure axes and grid
     ax.xaxis.set_major_formatter(DateFormatter("%Y-%m-%d %H:%M"))
