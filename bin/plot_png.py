@@ -77,7 +77,7 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
                     max_measure = diff
             ax.plot_date(
                 dates2, measures2,
-                label=u"Sammenligning",
+                label=u"Referancemåling",
                 marker="x",
                 linestyle="-",
                 color='g'

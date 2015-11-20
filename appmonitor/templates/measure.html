@@ -1,7 +1,7 @@
 {% extends "base_layout.html" %}
 {% load l10n %}
 
-{% block title %}Måling '{{ mname }}'{% endblock %}
+{% block title %}Måling '{{ testsuite.name }}' - '{{ mname }}'{% endblock %}
 
 {% block breadcrumbs %}
     <li><a href="{% url 'appmonitor:testsuite' testsuite.pk %}">{{ testsuite.name }}</a></li>
@@ -10,13 +10,20 @@
 
 
 {% block content %}
-<h1>Måling '{{ mname }}'</h1>
+<h1>Måling '{{ testsuite.name }}' - '{{ mname }}'</h1>
 <div>
     <form action="" method="get">
-        <label for="target_input">Indsæt målsætnings-linie ved:</label>
-        <input id="target_input" type="number" class="form-control"  step="0.1"
-               name="t" value="{{t|default:"1"}}"/>
-        <h3>Sammenlign med:</h3>
+        <div>
+            <label for="target_input">Indsæt målsætnings-linie ved:</label>
+            <div>
+                <input id="target_input" type="number" size="5"
+                       class="form-control"
+                       style="width: 5em; display: inline-block;"
+                       step="0.1" name="t" value="{{t|default:"1"}}"/>
+                sekunder
+            </div>
+        </div>
+        <h3>Referancemåling:</h3>
         <div>
             <label for="cmp_ts">Testsuite:</label>
             <select id="cmp_ts" name="cmp_ts" data-selected="{{cmp_ts}}">
