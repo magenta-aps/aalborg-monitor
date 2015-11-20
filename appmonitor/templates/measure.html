@@ -40,7 +40,7 @@
     </form>
 </div>
 <div>
-    <img src="{% url 'appmonitor:png' testsuite.pk mname %}?t={{t}}&cmp={{cmp}}"
+    <img src="{% url 'appmonitor:png' testsuite.pk mname %}?t={{t}}&cmp={{cmp}}&from={{from}}&to={{to}}"
          width="800" height="600" />
 </div>
 {% endblock %}

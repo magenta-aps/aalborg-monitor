@@ -15,10 +15,13 @@ from django.conf import settings
 from appmonitor.models import TestMeasure
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
-from django.utils import timezone
+from django.utils import timezone, dateparse
 import io, os, datetime, sys, django, locale
 
-def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
+def plot_png(
+        pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None,
+        t_from = None, t_to = None
+    ):
     timezone.activate(timezone.get_current_timezone())
     if not (pk and mname):
         raise Exception("You must specify at least two command line args")
@@ -31,11 +34,27 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
     dates = []
     measures = []
 
+    extra_filters = {}
+    try:
+        t_from = dateparse.parse_datetime(t_from)
+        if t_from:
+            extra_filters['started__gte'] = t_from
+    except:
+        pass
+    
+    try:
+        t_to = dateparse.parse_datetime(t_to)
+        if t_to:
+            extra_filters['ended__lte'] = t_to
+    except:
+        pass
+
     max_measure = 0
     items = TestMeasure.objects.filter(
         test_run__test_suite__pk = pk,
         name = mname,
-        success = 1
+        success = 1,
+        **extra_filters
     ).order_by("started", "ended")
 
     if len(items) == 0:
@@ -64,7 +83,8 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
         cmp_items = TestMeasure.objects.filter(
             test_run__test_suite__pk = cmp_pk,
             name = cmp_mname,
-            success = 1
+            success = 1,
+            **extra_filters
         ).order_by("started", "ended")
         if len(cmp_items) > 0:
             dates2 = []

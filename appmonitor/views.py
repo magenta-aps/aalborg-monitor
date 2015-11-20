@@ -14,6 +14,7 @@
 from django.shortcuts import render
 from django.conf import settings
 from django.http import HttpResponse, Http404
+from django.utils import dateparse
 from django.views.generic import ListView, DetailView, TemplateView, View
 from appmonitor.models import TestSuite, TestRun, TestMeasure
 from markdown import Markdown
@@ -112,6 +113,8 @@ class MeasureView(TemplateView):
         context['t'] = self.request.GET.get("t", "")
         context['cmp'] = self.request.GET.get("cmp", "")
         context['cmp_ts'] = self.request.GET.get("cmp_ts", "")
+        context['from'] = self.request.GET.get("from", "")
+        context['to'] = self.request.GET.get("to", "")
         
         cmp_data = []
         qs = TestMeasure.objects.exclude(
@@ -154,6 +157,28 @@ class MeasurePNGView(View):
         if cmp_str:
             for x in cmp_str.split("/", 1):
                 cmd.append(x)
+        else:
+            cmd.append("")
+            cmd.append("")
+
+        t_from = request.GET.get("from", None)
+        try:
+            t_from = dateparse.parse_datetime(t_from)
+            if not t_from:
+                t_from = ""
+        except:
+            t_from = ""
+        cmd.append(str(t_from))
+        
+        t_to = request.GET.get("to", None)
+        try:
+            t_to = dateparse.parse_datetime(t_to)
+            if not t_to:
+                t_to = ""
+        except:
+            t_to = ""
+        cmd.append(str(t_to))
+
         cmd = [unicode(x).encode(os_encoding) for x in cmd]
         fname = subprocess.check_output(cmd).strip()
         if fname and fname != "":
