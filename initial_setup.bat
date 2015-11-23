@@ -47,7 +47,7 @@ GOTO setupvirtualenv
 
 :setupvirtualenv
 %VIRTUALENV_EXE% %VIRTUALENV_LOCATION%
-python %~dp0%bin\copy_tcl.py
+%PYTHON_EXE% %~dp0%bin\copy_tcl.py
 GOTO activatevirtualenv
 
 :activatevirtualenv
