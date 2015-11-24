@@ -97,7 +97,7 @@ def plot_png(
                     max_measure = diff
             ax.plot_date(
                 dates2, measures2,
-                label=u"Referancemåling",
+                label=u"Referencemåling",
                 marker="x",
                 linestyle="-",
                 color='g'
