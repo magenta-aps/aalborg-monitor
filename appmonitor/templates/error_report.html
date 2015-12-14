@@ -1,0 +1,43 @@
+{% extends "base_layout.html" %}
+
+{% block title %}Oversigt over fejlede målinger{% endblock %}
+
+{% block breadcrumbs %}
+    <li>Oversigt over fejlede målinger</li>
+{% endblock %}
+
+
+{% block content %}
+<h1>Oversigt over fejlede målinger</h1>
+<p>
+    Denne side viser en oversigt over fejl der er opstået under forsøg på at
+    udføre målinger. Tabellen viser hvilken måling der fejler i hvilken test,
+    fejlbeskeden fra systemet, samt hvor mange gange hver fejl har optrådt.
+</p>
+<div>
+<table class="table table-bordered table-striped table-hover table-clickablerows">
+    <thead>
+        <tr>
+            <th>Test</th>
+            <th>Måling</th>
+            <th>Fejlbesked</th>
+            <th class="text-right">Antal gentagelser</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for data in object_list %}
+        <tr>
+            <td>{{ data.test_run__test_suite__name }}</td>
+            <td>{{ data.name }}</td>
+            <td>
+                <pre
+                    style="overflow: auto; max-width: 52em"
+                >{{ data.failure_reason }}</pre>
+            </td>
+            <td class="text-right">{{ data.fcount }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

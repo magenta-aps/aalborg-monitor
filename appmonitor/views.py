@@ -17,6 +17,7 @@ from django.http import HttpResponse, Http404
 from django.utils import dateparse
 from django.views.generic import ListView, DetailView, TemplateView, View
 from appmonitor.models import TestSuite, TestRun, TestMeasure
+from django.db.models import Count
 from markdown import Markdown
 import io, os, datetime, sys, glob, subprocess, locale, json
 
@@ -188,3 +189,16 @@ class MeasurePNGView(View):
             return response
         else:
             raise Http404("Image not found")
+
+class ErrorReportView(ListView):
+    template_name = "error_report.html"
+    
+    queryset = TestMeasure.objects.filter(
+        failure_reason__isnull=False
+    ).values(
+        "test_run__test_suite__name",
+        "name",
+        "failure_reason"
+    ).annotate(
+        fcount=Count("pk")
+    ).order_by("-fcount")
