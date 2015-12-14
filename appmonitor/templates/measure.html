@@ -25,7 +25,6 @@
         </div>
         <h3>Referencemåling:</h3>
         <div>
-        {{ days }}
             <label for="days">Periode:</label>
             <select id="days" name="days">
                 <option {% if days == '1' %}selected="selected"{% endif %} value="1">Seneste døgn</option>
@@ -33,6 +32,8 @@
                 <option {% if days == '7' %}selected="selected"{% endif %} value="7">Seneste uge</option>
                 <option {% if days == '30' %}selected="selected"{% endif %} value="30">Sidste måned</option>
             </select>
+        </div>
+        <div>
             <label for="cmp_ts">Testsuite:</label>
             <select id="cmp_ts" name="cmp_ts" data-selected="{{cmp_ts}}">
                 <option value="">[Vælg testsuite]</option>
