@@ -18,7 +18,8 @@
 /AutoIT
 /bin/IEDriverServer.exe
 
-/testsuites/development
+/testsuites/*
+!/testsuites/google_search
 /testsuites/**/*.exe
 /testsuites/**/sqlite3*.dll
 /testsuites/**/*.err
