@@ -115,7 +115,12 @@ class MeasureView(TemplateView):
         context['cmp_ts'] = self.request.GET.get("cmp_ts", "")
         context['from'] = self.request.GET.get("from", "")
         context['to'] = self.request.GET.get("to", "")
-        
+        days = self.request.GET.get("days", "")
+        if days == '':
+            context['days'] = '7'
+        else:
+            context['days'] = days
+
         cmp_data = []
         qs = TestMeasure.objects.exclude(
             test_run__test_suite__name="DEBUG"
@@ -147,7 +152,7 @@ class MeasurePNGView(View):
     def get(self, request, *args, **kwargs):
         os_encoding = locale.getpreferredencoding()
         cmd = [
-            "python.exe",
+            settings.PYTHON_EXE,
             os.path.join(settings.BASE_DIR, "bin", "plot_png.py"),
             kwargs["pk"],
             kwargs["mname"],
@@ -160,31 +165,51 @@ class MeasurePNGView(View):
         else:
             cmd.append("")
             cmd.append("")
-
-        t_from = request.GET.get("from", None)
-        try:
-            t_from = dateparse.parse_datetime(t_from)
-            if not t_from:
+        # 'days=' in query string calculates and overrules 'from='
+        if request.GET.get("days", None):
+            days = request.GET.get("days")
+            t_from = ''
+            now = datetime.datetime.now()
+            if days == '1':
+                t_from = now - datetime.timedelta(1)
+            elif days == '3':
+                t_from = now - datetime.timedelta(3)
+            elif days == '7' or days == '':
+                t_from = now - datetime.timedelta(7)
+            elif days == '30':
+                t_from = now - datetime.timedelta(30)
+            # this is ruled by 'days=' here
+            cmd.append(str(t_from))
+        else:
+            t_from = request.GET.get("from", None)
+            try:
+                t_from = dateparse.parse_datetime(t_from)
+                if not t_from:
+                    t_from = ""
+            except:
                 t_from = ""
-        except:
-            t_from = ""
-        cmd.append(str(t_from))
-        
-        t_to = request.GET.get("to", None)
-        try:
-            t_to = dateparse.parse_datetime(t_to)
-            if not t_to:
+            cmd.append(str(t_from))
+
+            t_to = request.GET.get("to", None)
+            try:
+                t_to = dateparse.parse_datetime(t_to)
+                if not t_to:
+                    t_to = ""
+            except:
                 t_to = ""
-        except:
-            t_to = ""
-        cmd.append(str(t_to))
+            cmd.append(str(t_to))
 
         cmd = [unicode(x).encode(os_encoding) for x in cmd]
-        fname = subprocess.check_output(cmd).strip()
+        fname = subprocess.check_output(cmd, env=os.environ.copy()).strip()
         if fname and fname != "":
             f = open(fname.decode(os_encoding), 'rb')
             response = HttpResponse(f.read(), 'image/png')
             f.close()
             return response
         else:
-            raise Http404("Image not found")
+            f = open('appmonitor/static/appmonitor/nodata.png'.decode(os_encoding), 'rb')
+            response = HttpResponse(f.read(), 'image/png')
+            f.close()
+            return response
+
+            #raise Http404("Image not found")
