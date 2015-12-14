@@ -25,6 +25,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import platform
 
 SITE_DIR = os.path.normcase(os.path.dirname(os.path.abspath(__file__)))
 BASE_DIR =  os.path.dirname(SITE_DIR)
@@ -128,6 +129,13 @@ MAIL_SMTP_SERVER_PORT = None
 MAIL_SMTP_USE_TLS = False
 MAIL_SMTP_SERVER_LOGIN = None
 MAIL_SMTP_SERVER_PASSWORD = None
+
+# Currently all customers run Windows...
+PYTHON_EXE = 'python.exe'
+
+# ... redefine Python executable if we're on Linux
+if platform.system() == 'Linux':
+    PYTHON_EXE = 'python'
 
 # Import local settings if they exist
 LOCAL_SETTINGS_FILE = os.path.join(SITE_DIR, "local_settings.py")

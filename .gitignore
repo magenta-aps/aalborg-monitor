@@ -1,4 +1,5 @@
 /env
+/python-env
 /.installed.cfg
 /develop-eggs
 /dist
@@ -27,6 +28,7 @@
 
 /.idea
 /*.sqlite3
+/*.sqlite3*
 /*.whl
 
 sqlite3.dll
