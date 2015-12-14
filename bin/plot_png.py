@@ -15,9 +15,14 @@ from django.conf import settings
 from appmonitor.models import TestMeasure
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
+from django.utils import timezone, dateparse
 import io, os, datetime, sys, django, locale
 
-def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
+def plot_png(
+        pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None,
+        t_from = None, t_to = None
+    ):
+    timezone.activate(timezone.get_current_timezone())
     if not (pk and mname):
         raise Exception("You must specify at least two command line args")
     django.setup()
@@ -29,11 +34,27 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
     dates = []
     measures = []
 
+    extra_filters = {}
+    try:
+        t_from = dateparse.parse_datetime(t_from)
+        if t_from:
+            extra_filters['started__gte'] = t_from
+    except:
+        pass
+    
+    try:
+        t_to = dateparse.parse_datetime(t_to)
+        if t_to:
+            extra_filters['ended__lte'] = t_to
+    except:
+        pass
+
     max_measure = 0
     items = TestMeasure.objects.filter(
         test_run__test_suite__pk = pk,
         name = mname,
-        success = 1
+        success = 1,
+        **extra_filters
     ).order_by("started", "ended")
 
     if len(items) == 0:
@@ -42,7 +63,7 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
     fig, ax = plt.subplots()
 
     for item in items:
-        dates.append(item.started)
+        dates.append(timezone.make_naive(item.started))
         diff = (item.ended - item.started).total_seconds()
         measures.append(diff)
         if diff > max_measure:
@@ -62,20 +83,21 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
         cmp_items = TestMeasure.objects.filter(
             test_run__test_suite__pk = cmp_pk,
             name = cmp_mname,
-            success = 1
+            success = 1,
+            **extra_filters
         ).order_by("started", "ended")
         if len(cmp_items) > 0:
             dates2 = []
             measures2 = []
             for item in cmp_items:
-                dates2.append(item.started)
+                dates2.append(timezone.make_naive(item.started))
                 diff = (item.ended - item.started).total_seconds()
                 measures2.append(diff)
                 if diff > max_measure:
                     max_measure = diff
             ax.plot_date(
                 dates2, measures2,
-                label=u"Sammenligning",
+                label=u"Referencemåling",
                 marker="x",
                 linestyle="-",
                 color='g'
@@ -92,7 +114,7 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
             max_measure = targetvalue
 
     # Plot the legends
-    ax.legend(numpoints = 1)
+    ax.legend(numpoints = 1, loc='upper left')
 
     # Configure axes and grid
     ax.xaxis.set_major_formatter(DateFormatter("%Y-%m-%d %H:%M"))
@@ -106,7 +128,9 @@ def plot_png(pk, mname, targetvalue = None, cmp_pk = None, cmp_mname = None):
     fig.autofmt_xdate()
 
     fname = u"_".join([
-        unicode(x) for x in [pk, mname, cmp_pk, cmp_mname, targetvalue] if x
+        unicode(x).replace("/", "_") for x in [
+            pk, mname, cmp_pk, cmp_mname, targetvalue
+        ] if x
     ]) + ".png"
 
     full_path_fname = os.path.join(settings.STATIC_ROOT, "plots", fname)

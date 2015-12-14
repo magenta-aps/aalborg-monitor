@@ -21,7 +21,7 @@ from django.template.loader import get_template
 from email.mime.text import MIMEText
 from email.utils import parseaddr
 
-import os, io, xlwt, csv
+import os, io, xlwt, csv, platform
 
 # Create your models here.
 
@@ -129,7 +129,7 @@ class TestSuite(models.Model):
                     for n in names[current_idx + 1:]:
                         indexes[n] += 1
 
-                # Next index is one higher that the index of the current
+                # Next index is one higher than the index of the current
                 # element, unless that index is less than the current one
                 if indexes[m.name] >= current_idx:
                     current_idx = indexes[m.name] + 1
@@ -397,7 +397,8 @@ class TestRun(models.Model):
                 'testrun': self,
                 'testsuite': self.test_suite,
                 'contactpersons': contactpersons,
-                'measure': measure
+                'measure': measure,
+                'systemname': platform.node()
             }
             content = template.render(context)
             content = content.replace("\\\r\n", "").replace("\\\n", "")

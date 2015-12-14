@@ -19,8 +19,6 @@
 /bin/IEDriverServer.exe
 
 /testsuites/development
-/testsuites/dubu
-/testsuites/workbase
 /testsuites/**/*.exe
 /testsuites/**/sqlite3*.dll
 /testsuites/**/*.err
