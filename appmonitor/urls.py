@@ -14,6 +14,7 @@ from django.conf.urls import url
 from appmonitor.views import TestSuiteList, TestSuiteDetailView
 from appmonitor.views import TestSuiteDownloadView, MeasureView, MeasurePNGView
 from appmonitor.views import TestRunDetailView, DocumentationView
+from appmonitor.views import ErrorReportView
 
 urlpatterns = [
     url(r'^$',
@@ -39,5 +40,8 @@ urlpatterns = [
         name="documentation"),
     url(r'^documentation/?',
         DocumentationView.as_view(),
-        name="documentation")
+        name="documentation"),
+    url(r'^error_report/?',
+        ErrorReportView.as_view(),
+        name="error_report")
 ]
