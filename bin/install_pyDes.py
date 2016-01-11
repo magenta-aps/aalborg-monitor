@@ -1,0 +1,23 @@
+# The contents of this file are subject to the Mozilla Public License
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License at
+#    http://www.mozilla.org/MPL/
+#
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+#
+# Copyright 2015 Magenta Aps
+#
+import subprocess
+import os
+import platform
+from initial_setup import download
+
+DL_URI = 'http://twhiteman.netfirms.com/pyDES/pyDes-2.0.1.zip'
+
+if __name__ == '__main__':
+    # Install nympy if it is missing
+    filename = download(DL_URI)
+    subprocess.call(['pip.exe', 'install', filename ]);
