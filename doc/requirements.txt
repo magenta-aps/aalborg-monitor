@@ -3,8 +3,6 @@ selenium
 markdown
 xlwt
 psutil
---allow-external pyDes
---allow-unverified pyDes
-pyDes
 # Also needs numpy, but it will be installed from precompiled binaries
+# Also needs pyDes, installed from .whl
 matplotlib

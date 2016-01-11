@@ -53,6 +53,7 @@ GOTO activatevirtualenv
 :activatevirtualenv
 call %~dp0%configure_environment.bat
 python %~dp0%bin\install_numpy.py
+python %~dp0%bin\install_pyDes.py
 pip install -r %~dp0%doc\requirements.txt
 python %~dp0%bin\initial_setup.py
 python %MAMAGE_SCRIPT% migrate
