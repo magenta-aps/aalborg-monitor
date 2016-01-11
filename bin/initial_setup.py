@@ -17,6 +17,7 @@ import tempfile
 import time
 import platform
 import subprocess
+import ssl
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BIN_DIR = os.path.join(BASE_DIR, "bin")
@@ -54,7 +55,11 @@ def download(url):
         print "Delete it if you wish to re-download"
         return file_name
 
-    u = urllib2.urlopen(url)
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    u = urllib2.urlopen(url, context=ctx)
     f = open(file_name, 'wb')
     meta = u.info()
     file_size = int(meta.getheaders("Content-Length")[0])
