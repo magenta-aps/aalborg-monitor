@@ -582,6 +582,21 @@ Func AppmonitorIEMoveMouseToObj(ByRef $oObject)
    MouseMove($iX, $iY)
 EndFunc
 
+Func AppmonitorCheckUnexpectedAlert()
+	If WinExists("[CLASS:#32770]", "OK") Then
+		Local $hWnd = WinWait("[CLASS:#32770]", "OK")
+		ConsoleWriteError("An unexpected alert appeared: " & @CRLF)
+		ConsoleWriteError("--------------------------------------------------------" & @CRLF)
+		ConsoleWriteError(WinGetText($hWnd) & @CRLF)
+		ConsoleWriteError("--------------------------------------------------------" & @CRLF)
+		ControlFocus($hWnd, "", "[CLASS:Button; INSTANCE:1]")
+		ControlClick($hWnd, "", "[CLASS:Button; INSTANCE:1]")
+		Return 1
+	EndIf
+
+	Return 0
+EndFunc
+
 ; Methods for handling proper shutdown of IE
 Func AppmonitorIEReattach($sString, $sMode = "title", $iInstance = 1)
     Local $hIEAttachStart = TimerInit()
@@ -607,6 +622,13 @@ Func AppmonitorRegisterIEShutdown(ByRef $oIE)
 EndFunc
 
 Func __AppmonitorShutdownIE()
+	; Try to close all IE alert dialogs, up to maximum of 5
+	Local $iMaxDialogs = 5;
+	While AppmonitorCheckUnexpectedAlert() <> 0 And $iMaxDialogs > 0
+		$iMaxDialogs = $iMaxDialogs - 1
+		Sleep(100)
+	WEnd
+	; Close any registered IE Window
     If IsObj($__IEObjectToShutdown) Then
         _IEQuit($__IEObjectToShutdown)
     EndIf

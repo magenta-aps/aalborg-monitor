@@ -1,4 +1,5 @@
 /env
+/python-env
 /.installed.cfg
 /develop-eggs
 /dist
@@ -18,7 +19,8 @@
 /AutoIT
 /bin/IEDriverServer.exe
 
-/testsuites/development
+/testsuites/*
+!/testsuites/google_search
 /testsuites/**/*.exe
 /testsuites/**/sqlite3*.dll
 /testsuites/**/*.err
@@ -26,6 +28,7 @@
 
 /.idea
 /*.sqlite3
+/*.sqlite3*
 /*.whl
 
 sqlite3.dll
