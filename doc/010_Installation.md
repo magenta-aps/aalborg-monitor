@@ -4,6 +4,8 @@ For at installere løsningen gøres følgende:
 
 * Hent og installer den seneste version af python 2.7 .MSI fra
   [https://www.python.org/downloads/windows/](https://www.python.org/downloads/windows/)
+  Installér den version af python (32bit eller 64bit) der svarer til
+  arkitekturen for operativsystemet løsningen skal afvikles på.
 * Hent den seneste version af softwaren fra github:
   [https://github.com/magenta-aps/aalborg-monitor](https://github.com/magenta-aps/aalborg-monitor)
 * Pak filerne ud hvis du hentede softwaren som et zip-arkiv
