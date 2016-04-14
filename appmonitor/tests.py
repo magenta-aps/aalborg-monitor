@@ -70,8 +70,10 @@ class AppmonitorTestCase(unittest.TestCase):
         self.driver.quit()
         self.assertEqual([], self.verificationErrors)
 
-    def start_measure(self, name):
-        measure = self.test_run.create_measure(name)
+    def start_measure(self, name, failure_threshold=None):
+        measure = self.test_run.create_measure(
+            name, failure_threshold=failure_threshold
+        )
         self.active_measures[name] = measure
         self.last_measure = measure
         return measure

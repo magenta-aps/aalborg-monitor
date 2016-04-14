@@ -308,12 +308,16 @@ class TestRun(models.Model):
     def succeeded(self):
         return self.exitstatus is not None and self.exitstatus == 0
 
-    def create_measure(self, name):
+    def create_measure(self, name, failure_threshold=None):
         measure = TestMeasure()
         measure.test_run = self
         measure.name = name
         measure.started = timezone.now()
         measure.save()
+
+        if failure_threshold is not None:
+            measure.set_initial_failure_threshold(failure_threshold)
+
         return measure
 
     def export_environment(self):
@@ -452,6 +456,8 @@ class TestMeasure(models.Model):
     success = models.IntegerField(null=True, blank=True)
     failure_reason = models.TextField(null=True, blank=True)
 
+    config = models.ForeignKey('TestMeasureConfig', blank=True, null=True)
+
     def __unicode__(self):
         return ("TestMeasure: " + self.name + " for " +
                 self.test_run.verbose_name())
@@ -471,7 +477,44 @@ class TestMeasure(models.Model):
         self.ended = timezone.now()
         self.success = 0
         self.save()
-    
+
+    def get_or_create_config(self):
+        if not self.config:
+            try:
+                self.config = TestMeasureConfig.objects.get(
+                    test_suite=self.test_run.test_suite,
+                    name=self.name
+                )
+                self.save()
+            except TestMeasureConfig.DoesNotExist:
+                self.config = TestMeasureConfig(
+                    test_suite=self.test_run.test_suite,
+                    name=self.name
+                )
+                self.config.save()
+                self.save()
+
+        return self.config
+
+    def set_initial_failure_threshold(self, value):
+        cnf = self.get_or_create_config()
+
+        if cnf.failure_threshold is None:
+            cnf.failure_threshold = value;
+            cnf.save()
+
+
+class TestMeasureConfig(models.Model):
+    test_suite = models.ForeignKey(TestSuite)
+    name = models.CharField(max_length=255)
+
+    failure_threshold = models.IntegerField(
+        blank=True,
+        null=True,
+        default=None
+    )
+
+
 class ConfigurationValue(models.Model):
     name = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
