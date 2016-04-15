@@ -1,3 +1,40 @@
 table.table-clickablerows tr {
     cursor: pointer;
 }
+
+#measureimageasdf {
+    position: relative;
+}
+
+#measureimage img {
+    max-width: 800px;
+    cursor: pointer;
+}
+
+#measureimage .fullscreen-controls {
+    display: none;
+    z-index: 1200;
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 1em;
+}
+
+#measureimage.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1100;
+    width: 100%;
+    height: 100%;
+    background-color: #FFFFFF;
+}
+
+#measureimage.fullscreen .fullscreen-controls {
+    display: block;
+}
+
+
+#measureimage.fullscreen.loaded img {
+    max-width: none;
+}

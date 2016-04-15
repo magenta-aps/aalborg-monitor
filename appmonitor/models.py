@@ -26,13 +26,18 @@ import os, io, xlwt, csv, platform
 # Create your models here.
 
 class ContactPerson(models.Model):
+
+    class Meta:
+        verbose_name = u"kontaktperson"
+        verbose_name_plural = u"kontaktpersoner"
+
     first_name = models.CharField(max_length=255)
     middle_names = models.CharField(max_length=255, blank=True)
     last_name = models.CharField(max_length=255)
     email = models.EmailField()
 
     def __unicode__(self):
-        return "ContactPerson: " + self.verbose_name()
+        return self.verbose_name()
 
     def verbose_name(self):
         return self.full_name() + " <" + self.email + ">"
@@ -48,6 +53,11 @@ class ContactPerson(models.Model):
         return make_email_header(self.email, self.full_name())
 
 class TestSuite(models.Model):
+
+    class Meta:
+        verbose_name = u"testsuite"
+        verbose_name_plural = u"testsuiter"
+
     name = models.CharField(max_length=255)
     directory = models.CharField(max_length=255)
     executeable = models.CharField(max_length=255)
@@ -61,7 +71,7 @@ class TestSuite(models.Model):
         verbose_name=u'Emailbesked ved fejl'
     )
     def __unicode__(self):
-        return "TestSuite: " + self.name
+        return self.name
 
     @classmethod
     def locate_by_path(cls, path):
@@ -264,6 +274,11 @@ class TestSuite(models.Model):
         return output.getvalue()
 
 class TestRun(models.Model):
+
+    class Meta:
+        verbose_name = u"testafvikling"
+        verbose_name_plural = u"testafviklinger"
+
     test_suite = models.ForeignKey(TestSuite)
 
     started = models.DateTimeField()
@@ -289,10 +304,10 @@ class TestRun(models.Model):
     )
 
     def __unicode__(self):
-        return "TestRun: " + self.verbose_name()
+        return self.verbose_name()
 
     def verbose_name(self):
-        return self.test_suite.name + "@" + str(self.started)[:19]
+        return self.test_suite.name + " @ " + str(self.started)[:19]
 
     def finish(self, exitstatus=0):
         if exitstatus != 0:
@@ -447,6 +462,11 @@ class TestRun(models.Model):
 
 
 class TestMeasure(models.Model):
+
+    class Meta:
+        verbose_name = u"målt værdi"
+        verbose_name_plural = u"målte værdier"
+
     test_run = models.ForeignKey(TestRun)
 
     name = models.CharField(max_length=255)
@@ -459,15 +479,14 @@ class TestMeasure(models.Model):
     config = models.ForeignKey('TestMeasureConfig', blank=True, null=True)
 
     def __unicode__(self):
-        return ("TestMeasure: " + self.name + " for " +
-                self.test_run.verbose_name())
+        return u"%s: %s" % (self.test_run.verbose_name(), self.name)
 
     def measure_time(self):
         if self.ended is None or self.started is None:
             return None
 
         return (self.ended - self.started).total_seconds()
-    
+
     def succeed(self):
         self.ended = timezone.now()
         self.success = 1
@@ -480,19 +499,11 @@ class TestMeasure(models.Model):
 
     def get_or_create_config(self):
         if not self.config:
-            try:
-                self.config = TestMeasureConfig.objects.get(
-                    test_suite=self.test_run.test_suite,
-                    name=self.name
-                )
-                self.save()
-            except TestMeasureConfig.DoesNotExist:
-                self.config = TestMeasureConfig(
-                    test_suite=self.test_run.test_suite,
-                    name=self.name
-                )
-                self.config.save()
-                self.save()
+            self.config = TestMeasureConfig.get_or_create(
+                self.test_run.test_suite,
+                self.name
+            )
+            self.save()
 
         return self.config
 
@@ -505,24 +516,83 @@ class TestMeasure(models.Model):
 
 
 class TestMeasureConfig(models.Model):
+
+    class Meta:
+        verbose_name = u"indstillinger for måling"
+        verbose_name_plural = u"indstillinger for målinger"
+
     test_suite = models.ForeignKey(TestSuite)
     name = models.CharField(max_length=255)
 
-    failure_threshold = models.IntegerField(
+    failure_threshold = models.FloatField(
         blank=True,
         null=True,
-        default=None
+        default=None,
+        verbose_name=u"Alarmtærskel"
     )
 
+    ALARM_STATUS_NORMAL = 0
+    ALARM_STATUS_ALARM = 1
+
+    alarm_status_choices = (
+        (ALARM_STATUS_NORMAL, u"Normal"),
+        (ALARM_STATUS_ALARM, u"Alarm")
+    )
+
+    alart_status = models.IntegerField(
+        choices=alarm_status_choices,
+        default=ALARM_STATUS_NORMAL
+    )
+
+    @classmethod
+    def get_or_create(cls, test_suite, name):
+        try:
+            return cls.objects.get(
+                test_suite=test_suite,
+                name=name
+            )
+        except TestMeasureConfig.DoesNotExist:
+            new_obj = TestMeasureConfig(
+                test_suite=test_suite,
+                name=name
+            )
+            new_obj.save()
+            return new_obj
+
+    def __unicode__(self):
+        return u"Indstillinger for %s: %s" % (self.test_suite.name, self.name)
 
 class ConfigurationValue(models.Model):
+
+    class Meta:
+        verbose_name = u"konfigurationsværdi"
+        verbose_name_plural = u"konfigurationsværdier"
+        
     name = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
 
+    @classmethod
+    def get_or_create_default(cls, name, default):
+        try:
+            obj = cls.objects.get(name=name)
+        except cls.DoesNotExist:
+            obj = cls(
+                name=name,
+                value=default
+            )
+            obj.save()
+
+        return obj
+
     def __unicode__(self):
-        return "ConfigurationValue (" + self.name + ")"
+        return self.name
 
 class ErrorNotification(models.Model):
+
+    class Meta:
+        verbose_name = u"registreret fejlbesked"
+        verbose_name_plural = u"registrede fejlbeskeder"
+        
     test_suite = models.ForeignKey(TestSuite)
     failed_measure = models.ForeignKey(TestMeasure, blank=True)
     when = models.DateTimeField()

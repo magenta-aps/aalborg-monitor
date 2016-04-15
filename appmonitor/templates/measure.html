@@ -14,13 +14,14 @@
 <div>
     <form action="" method="get">
         <div>
-            <label for="target_input">Indsæt målsætnings-linie ved:</label>
+            <label for="target_input">Målsætning:</label>
             <div>
-                <input id="target_input" type="number" size="5"
-                       class="form-control"
-                       style="width: 5em; display: inline-block;"
-                       step="0.1" name="t" value="{{t|default:"1"}}"/>
-                sekunder
+                {% if measureconfig.failure_threshold %}
+                {{ measureconfig.failure_threshold }} sekunder
+                {% else %}
+                Ikke angivet
+                {% endif %}
+                <a href="{% url 'admin:appmonitor_testmeasureconfig_change' measureconfig.pk %}" onclick="this.target='_blank'" class="btn btn-primary btn-xs">Rediger <span class="glyphicon glyphicon-new-window"></span></a>
             </div>
         </div>
         <h3>Referencemåling:</h3>
@@ -35,14 +36,14 @@
         </div>
         <div>
             <label for="cmp_ts">Testsuite:</label>
-            <select id="cmp_ts" name="cmp_ts" data-selected="{{cmp_ts}}">
+            <select id="cmp_ts" name="cmp_ts" data-selected="{{ request.GET.cmp_ts}}">
                 <option value="">[Vælg testsuite]</option>
                 {% for ts in cmp_data %}
                 <option value="{{ ts.pk }}">{{ ts.name }}</option>
                 {% endfor %}
             </select>
             <label for="cmp_measure">Måling:</label>
-            <select id="cmp_measure" name="cmp" data-selected="{{ cmp }}">
+            <select id="cmp_measure" name="cmp" data-selected="{{ request.GET.cmp|safe }}">
             </select>
         </div>
         <input type="hidden" name="from" value="{{from}}" />
@@ -50,9 +51,26 @@
         <input type="submit" value="Opdater" />
     </form>
 </div>
-<div>
-    <img src="{% url 'appmonitor:png' testsuite.pk mname %}?t={{t}}&cmp={{cmp}}&from={{from}}&to={{to}}&days={{ days }}"
-         width="800" height="600" />
+<p>
+    Klik på billedet for at åbne fuldskærms visning.
+</p>
+<div id="measureimage" class="">
+    <div class="fullscreen-controls btn-group" role="group">
+        <button class="btn btn-primary btn-sm">
+            <span class="glyphicon glyphicon-refresh"></span>
+            Opdatér
+        </button>
+        <button class="btn btn-success btn-sm">
+            <span class="glyphicon glyphicon-ok-circle"></span>
+            Afblæs alarm
+        </button>
+        <button class="btn btn-primary btn-sm">
+            <span class="glyphicon glyphicon-remove"></span>
+            Luk
+        </button>
+    </div>
+    <img src="{% url 'appmonitor:png' testsuite.pk mname %}?{{ qstring_copy }}"
+         width="100%" />
 </div>
 {% endblock %}
 {% block bodyend_scripts %}
@@ -86,6 +104,51 @@
         $("#cmp_ts").val($("#cmp_ts").attr("data-selected"));
         $("#cmp_ts").trigger("change");
         $("#cmp_measure").val($("#cmp_measure").attr("data-selected"));
+    });
+    
+    var $div = $('#measureimage'),
+        $img = $('#measureimage img').first();
+    function toggle_fullscreen() {
+        var src = $img.attr("src"),
+            src_parts,
+            new_qstring = [];
+
+        $div.toggleClass('fullscreen');
+        $div.removeClass('loaded');
+
+        //split src into url and querystring
+        src_parts = src.split("?", 2);
+        if (!src_parts[1]) {
+            src_parts[1] = ''
+        }
+
+        // Filter out xsize and ysize args
+        $.each(src_parts[1].split("&"), function() {
+            if (this && !this.match(/^((x|y)size|ts|fs)=/)) {
+                new_qstring.push(this)
+            }
+        });
+
+        // Add timestamp to avoid cache
+        new_qstring.push("ts=" + parseInt(new Date().getTime()/1000.0))
+        
+        // Add new size args if switching to fullscreen
+        if ($div.hasClass('fullscreen')) {
+            new_qstring.push("xsize=" + $div.width());
+            new_qstring.push("ysize=" + $div.height());
+            new_qstring.push("fs=1");
+        }
+
+        // rebuild the src
+        src_parts[1] = new_qstring.join("&")
+        $img.attr("src", src_parts.join("?"));
+
+    }
+    $img.on('click', toggle_fullscreen)
+    $img.on('load', function() {
+        if ($div.hasClass('fullscreen') && !$div.hasClass('loaded')) {
+            $div.addClass('loaded');
+        }
     });
 })(jQuery)
 //--></script>
