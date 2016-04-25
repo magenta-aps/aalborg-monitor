@@ -11,10 +11,11 @@
 #
 # Copyright 2015 Magenta Aps
 #
+from aalborgmonitor.forms import TestSuiteDetailForm
 from django.shortcuts import render
 from django.conf import settings
 from django.http import HttpResponse, Http404
-from django.utils import dateparse
+from django.utils import dateparse, timezone
 from django.views.generic import ListView, DetailView, TemplateView, View
 from appmonitor.models import TestSuite, TestRun, TestMeasure
 from django.db.models import Count
@@ -30,18 +31,78 @@ class TestSuiteList(ListView):
         name="DEBUG"
     ).order_by('name')
 
+
 class TestSuiteDetailView(DetailView):
     model = TestSuite
     template_name = 'testsuite.html'
     context_object_name = 'testsuite'
+    form = None
 
     def get_context_data(self, **kwargs):
+        today = timezone.now().date()
+        one_week_ago = today - datetime.timedelta(days=7)
+
         context = super(TestSuiteDetailView, self).get_context_data(**kwargs)
+        # context['form'] = TestSuiteDetailForm(kwargs)
+        context['form'] = self.get_form()
+        context['result_overview_from'] = self.request.GET.get("result_overview_from")
+        context['result_overview_to'] = self.request.GET.get("result_overview_to")
+        context['executed_tests_from'] = self.request.GET.get("executed_tests_from")
+        context['executed_tests_to'] = self.request.GET.get("executed_tests_to")
+
+        if context['result_overview_from'] is None or context['result_overview_from'] == '':
+            result_overview_from = one_week_ago
+        else:
+            result_overview_from = datetime.datetime.strptime(context['result_overview_from'], '%d-%m-%Y')
+
+        if context['result_overview_to'] is None or context['result_overview_to'] == '':
+            result_overview_to = None
+        else:
+            result_overview_to = datetime.datetime.strptime(context['result_overview_to'], '%d-%m-%Y')
+
+        if context['executed_tests_from'] is None or context['executed_tests_from'] == '':
+            executed_tests_from = one_week_ago
+        else:
+            executed_tests_from = datetime.datetime.strptime(context['executed_tests_from'], '%d-%m-%Y')
+
+        if context['executed_tests_to'] is None or context['executed_tests_to'] == '':
+            executed_tests_to = None
+        else:
+            executed_tests_to = datetime.datetime.strptime(context['executed_tests_to'], '%d-%m-%Y')
 
         if self.object:
-            context['runs'] = self.object.testrun_set.order_by('-started')
+            context['test_data'] = self.object.test_data(
+                result_overview_from,
+                result_overview_to
+            )
+            if executed_tests_from and executed_tests_to:
+                context['runs'] = self.object.testrun_set.filter(
+                    started__gte=executed_tests_from,
+                    started__lte=executed_tests_to
+                ).order_by('-started')
+            elif executed_tests_from:
+                context['runs'] = self.object.testrun_set.filter(
+                    started__gte=executed_tests_from,
+                ).order_by('-started')
+            elif executed_tests_to:
+                context['runs'] = self.object.testrun_set.filter(
+                    started__gte=executed_tests_to,
+                ).order_by('-started')
+            else:
+                context['runs'] = self.object.testrun_set.order_by('-started')
 
         return context
+
+    def get_form(self):
+        if not self.form:
+            # Make new form object
+            self.form = TestSuiteDetailForm(
+                self.request.GET,
+            )
+            # Process the form
+            self.form.is_valid()
+        return self.form
+
 
 class TestSuiteDownloadView(DetailView):
     model = TestSuite
@@ -103,6 +164,7 @@ class DocumentationView(TemplateView):
 
         return context
 
+
 class MeasureView(TemplateView):
     template_name = 'measure.html'
 
@@ -148,6 +210,7 @@ class MeasureView(TemplateView):
         context["cmp_data_json"] = json.dumps(cmp_data)
 
         return context
+
 
 class MeasurePNGView(View):
     def get(self, request, *args, **kwargs):

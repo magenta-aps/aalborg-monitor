@@ -25,13 +25,16 @@
         </div>
         <h3>Referencemåling:</h3>
         <div>
-            <label for="days">Periode:</label>
-            <select id="days" name="days">
-                <option {% if days == '1' %}selected="selected"{% endif %} value="1">Seneste døgn</option>
-                <option {% if days == '3' %}selected="selected"{% endif %} value="3">Seneste 3 døgn</option>
-                <option {% if days == '7' %}selected="selected"{% endif %} value="7">Seneste uge</option>
-                <option {% if days == '30' %}selected="selected"{% endif %} value="30">Sidste måned</option>
-            </select>
+            <label for="from">Fra:</label>
+            <input id="from" class="datepicker" data-provide="datepicker">
+            <label for="to">Til:</label>
+            <input id="to" class="datepicker" data-provide="datepicker">
+            <!--<select id="days" name="days">-->
+                <!--<option {% if days == '1' %}selected="selected"{% endif %} value="1">Seneste døgn</option>-->
+                <!--<option {% if days == '3' %}selected="selected"{% endif %} value="3">Seneste 3 døgn</option>-->
+                <!--<option {% if days == '7' %}selected="selected"{% endif %} value="7">Seneste uge</option>-->
+                <!--<option {% if days == '30' %}selected="selected"{% endif %} value="30">Sidste måned</option>-->
+            <!--</select>-->
         </div>
         <div>
             <label for="cmp_ts">Testsuite:</label>
@@ -86,6 +89,10 @@
         $("#cmp_ts").val($("#cmp_ts").attr("data-selected"));
         $("#cmp_ts").trigger("change");
         $("#cmp_measure").val($("#cmp_measure").attr("data-selected"));
+    });
+    $('.datepicker').datepicker({
+        language: 'da',
+        format: "dd-mm-yyyy",
     });
 })(jQuery)
 //--></script>

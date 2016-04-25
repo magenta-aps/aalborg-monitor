@@ -135,9 +135,29 @@ class TestSuite(models.Model):
                     current_idx = indexes[m.name] + 1
         return names
 
-    def test_data(self):
+    def test_data(self, from_date=None, to_date=None):
         data = {}
-        for m in TestMeasure.objects.filter(test_run__test_suite=self):
+        if from_date and to_date:
+            measures = TestMeasure.objects.filter(
+                test_run__test_suite=self,
+                started__gte=from_date,
+                started__lte=to_date
+            )
+        elif from_date:
+            measures = TestMeasure.objects.filter(
+                test_run__test_suite=self,
+                started__gte=from_date
+            )
+        elif to_date:
+            measures = TestMeasure.objects.filter(
+                test_run__test_suite=self,
+                started__lte=to_date
+            )
+        else:
+            measures = TestMeasure.objects.filter(
+                test_run__test_suite=self
+            )
+        for m in measures:
             if m.name not in data:
                 data[m.name] = {
                     'name': m.name,
@@ -153,22 +173,24 @@ class TestSuite(models.Model):
                 entry['spent_time'] += m.measure_time()
 
         result = []
-        for name in self.ordered_names():
-            entry = data[name]
-            if entry['successes'] > 0:
-                entry['avg_time'] = entry['spent_time'] / entry['successes']
-            else:
-                entry['avg_time'] = 0
-            entry['failures'] = entry['total'] - entry['successes']
+        if data:
+            for name in self.ordered_names():
+                entry = data.get(name, {})
+                if entry:
+                    if entry.get('successes', 0) > 0:
+                        entry['avg_time'] = entry.get('spent_time', 0) / entry['successes']
+                    else:
+                        entry['avg_time'] = 0
+                    entry['failures'] = entry.get('total', 0) - entry.get('successes', 0)
 
-            if entry['failures'] == 0:
-                entry['class'] = 'success'
-            else:
-                if entry['failures'] == entry['total']:
-                    entry['class'] = 'danger'
-                else:
-                    entry['class'] = 'warning'
-            result.append(entry)
+                    if entry.get('failures') == 0:
+                        entry['class'] = 'success'
+                    else:
+                        if entry.get('failures') == entry.get('total'):
+                            entry['class'] = 'danger'
+                        else:
+                            entry['class'] = 'warning'
+                    result.append(entry)
         return result
 
     def as_xls(self):
