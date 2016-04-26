@@ -20,6 +20,7 @@
 #include <Array.au3>
 #include <SQLite.au3>
 #include <SQLite.dll.au3>
+#include <ScreenCapture.au3>
 
 Local $__AppmonitorDbHandle
 Local $__AppminotorRun
@@ -503,8 +504,53 @@ Func AppmonitorExitWithError($iError)
     Exit($iError)
 EndFunc
 
+Func AppmonitorScreenCapture_SaveImage()
+    Local $sScreenshotsDir = _PathFull(@ScriptDir & "..\..\..\aalborgmonitor\static\screenshots\")
+    If Not $sScreenshotsDir Then
+        ConsoleWriteError("Could not get $sScreenshotsDir")
+        Exit -1
+    EndIf
+    Local $hBmp
+    ; Full path to file: C:\...\...\*.jpg
+    Local $sFile = $sScreenshotsDir & @year & @mon & @mday & "T" & @hour & @min & @sec & ".jpg"
+
+    ; Capture full screen
+    $hBmp = _ScreenCapture_Capture("")
+
+    ; Save bitmap to file
+    _ScreenCapture_SaveImage($sFile, $hBmp)
+
+    ; Save record in database
+    AppmonitorInsertScreenshotRecord($sFile)
+EndFunc
+
+Func AppmonitorInsertScreenshotRecord($sFile)
+    Local $hAppmonitorDb = AppmonitorGetDbHandle()
+    Local $iAppmonitorRun = AppmonitorGetRun()
+    Local $iAppmonitorMeasure = AppmonitorGetMeasure()
+    Local $sAppmonitorMeasureName = AppmonitorGetMeasureName($iAppmonitorMeasure)
+
+    Local $sSQL = "" & _
+        "INSERT INTO appmonitor_screenshot " & _
+        "(run_id_id, measure_name, file_name) " & _
+        "VALUES (" & _
+            $iAppmonitorRun & ", " & _
+            _SQLite_FastEscape($sAppmonitorMeasureName) & ", " & _
+            _SQLite_FastEscape($sFile) & _
+        ")"
+    ConsoleWrite($sSQL)
+    Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)
+    If $iResult == $SQLITE_OK Then
+        Return
+    Else
+        ConsoleWriteError("SQLite Error: Failed to insert ScreenShot!")
+        Exit -1
+    EndIf
+EndFunc
+
 Func AppmonitorCheckError($iError)
     If $iError <> 0 Then
+        AppmonitorScreenCapture_SaveImage()
         AppmonitorExitWithError($iError)
     EndIf
 EndFunc

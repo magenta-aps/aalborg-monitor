@@ -522,6 +522,7 @@ class ConfigurationValue(models.Model):
     def __unicode__(self):
         return "ConfigurationValue (" + self.name + ")"
 
+
 class ErrorNotification(models.Model):
     test_suite = models.ForeignKey(TestSuite)
     failed_measure = models.ForeignKey(TestMeasure, blank=True)
@@ -529,3 +530,10 @@ class ErrorNotification(models.Model):
 
     def __unicode__(self):
         return self.test_suite.name + ": " + str(self.when)[:19]
+
+
+class ScreenShot(models.Model):
+    run_id = models.ForeignKey(TestRun)
+    measure_name = models.TextField()
+    file_name = models.TextField()
+
