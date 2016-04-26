@@ -16,7 +16,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import ui
 from selenium.webdriver.support import expected_conditions as EC
 
-import unittest, django
+import unittest, django, os, datetime
 # Create your tests here.
 
 class AppmonitorTestCase(unittest.TestCase):
@@ -67,6 +67,16 @@ class AppmonitorTestCase(unittest.TestCase):
             exitstatus = 0 if success else -1
             self.test_run.finish(exitstatus)
             
+        if not success:
+            aalborg_monitor_root = os.path.dirname( # aalborg-monitor
+                os.path.dirname(                    # appmonitor/
+                    os.path.realpath(__file__)      # This script
+                )
+            )
+            file_name = '%s.png' % datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+            path = os.path.join(aalborg_monitor_root, 'aalborgmonitor', 'static', 'screenshots', file_name)
+            self.driver.get_screenshot_as_file(path)
+
         self.driver.quit()
         self.assertEqual([], self.verificationErrors)
 
