@@ -533,7 +533,7 @@ class ErrorNotification(models.Model):
 
 
 class ScreenShot(models.Model):
-    run_id = models.ForeignKey(TestRun)
+    test_run = models.ForeignKey(TestRun)
     measure_name = models.TextField()
     file_name = models.TextField()
 

@@ -10,7 +10,7 @@
 #
 # Copyright 2015 Magenta Aps
 #
-from appmonitor.models import TestSuite, TestMeasure
+from appmonitor.models import TestSuite, TestMeasure, ScreenShot
 from selenium import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import ui
@@ -76,6 +76,12 @@ class AppmonitorTestCase(unittest.TestCase):
             file_name = '%s.png' % datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
             path = os.path.join(aalborg_monitor_root, 'aalborgmonitor', 'static', 'screenshots', file_name)
             self.driver.get_screenshot_as_file(path)
+            screenshot = ScreenShot(
+                test_run= self.test_run,
+                measure_name=self.test_run.get_failed_measure().name,
+                file_name=path
+            )
+            screenshot.save()
 
         self.driver.quit()
         self.assertEqual([], self.verificationErrors)
