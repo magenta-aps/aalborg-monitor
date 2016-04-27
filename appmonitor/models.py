@@ -12,7 +12,7 @@
 # Copyright 2015 Magenta Aps
 #
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, F, Count, Sum, Avg
 from django.conf import settings
 from django.utils import timezone
 from appmonitor.utils import get_smtp_server, make_email_header
@@ -21,7 +21,7 @@ from django.template.loader import get_template
 from email.mime.text import MIMEText
 from email.utils import parseaddr
 
-import os, io, xlwt, csv, platform
+import os, io, xlwt, csv, platform, datetime
 
 # Create your models here.
 
@@ -125,6 +125,11 @@ class TestSuite(models.Model):
     # removed measurements after the previous measurement in the run in which
     # they are first encountered.
     def ordered_names(self):
+        remaining_namea = set()
+        all_qs = TestMeasure.objects.filter(test_run__test_suite=self)
+        for x in all_qs.values("name").distinct():
+            remaining_namea.add(x["name"])
+            
         indexes = {}
         names = []
         for run in self.testrun_set.order_by('-started', '-ended'):
@@ -138,49 +143,40 @@ class TestSuite(models.Model):
                     # Bump the index of the following names
                     for n in names[current_idx + 1:]:
                         indexes[n] += 1
+                    remaining_namea.remove(m.name)
 
                 # Next index is one higher than the index of the current
                 # element, unless that index is less than the current one
                 if indexes[m.name] >= current_idx:
                     current_idx = indexes[m.name] + 1
+
+                if not remaining_namea:
+                    break
+            if not remaining_namea:
+                break
+
         return names
 
     def test_data(self, from_date=None, to_date=None):
         data = {}
-        if from_date and to_date:
-            measures = TestMeasure.objects.filter(
-                test_run__test_suite=self,
-                started__gte=from_date,
-                started__lte=to_date
+        measures = TestMeasure.objects.filter(
+            test_run__test_suite=self
+        )
+        if from_date:
+            measures = measures.filter(started__gte=from_date)
+        if to_date:
+            measures = measures.filter(
+                started__lt=to_date + datetime.timedelta(days=1)
             )
-        elif from_date:
-            measures = TestMeasure.objects.filter(
-                test_run__test_suite=self,
-                started__gte=from_date
-            )
-        elif to_date:
-            measures = TestMeasure.objects.filter(
-                test_run__test_suite=self,
-                started__lte=to_date
-            )
-        else:
-            measures = TestMeasure.objects.filter(
-                test_run__test_suite=self
-            )
+
+        measures = measures.values("name").annotate(
+            total=Count("pk"),
+            successes=Count("success"),
+            spent_time=Sum("spent_time")
+        )
+
         for m in measures:
-            if m.name not in data:
-                data[m.name] = {
-                    'name': m.name,
-                    'total': 0,
-                    'successes': 0,
-                    'spent_time': 0
-                }
-            # Register new data
-            entry = data[m.name]
-            entry['total'] += 1
-            if(m.success):
-                entry['successes'] += 1
-                entry['spent_time'] += m.measure_time()
+            data[m['name']] = m
 
         result = []
         if data:
@@ -303,8 +299,8 @@ class TestRun(models.Model):
 
     test_suite = models.ForeignKey(TestSuite)
 
-    started = models.DateTimeField()
-    ended = models.DateTimeField(null=True, blank=True)
+    started = models.DateTimeField(db_index=True)
+    ended = models.DateTimeField(null=True, blank=True, db_index=True)
     exitstatus = models.IntegerField(null=True, blank=True)
     pid = models.IntegerField(null=True, blank=True)
 
@@ -407,8 +403,9 @@ class TestRun(models.Model):
     def check_alerts(self):
         alarms = []
 
-        for x in self.testmeasure_set.all():
-            print "Checking %s" % x.name
+        measures = self.testmeasure_set.all()
+
+        for x in measures:
             if x.update_alert_status():
                 alarms.append(x)
 
@@ -417,6 +414,8 @@ class TestRun(models.Model):
                 self.status = TestRun.STATUS_COMPLETED_WITH_ALERTS
                 self.save()
             self.notify_contactpersons(alarms)
+        elif self.status == TestRun.STATUS_FAILED and len(measures) == 0:
+            self.notify_contactpersons()
 
 
     def notify_contactpersons(self, failed_measures=[]):
@@ -478,11 +477,12 @@ class TestRun(models.Model):
             )
 
             # Register the error notification
-            notification = ErrorNotification()
-            notification.when = timezone.now()
-            notification.test_suite = self.test_suite
-            notification.failed_measure = None
-            notification.save()
+            if len(failed_measures) == 0:
+                notification = ErrorNotification()
+                notification.when = timezone.now()
+                notification.test_suite = self.test_suite
+                notification.failed_measure = None
+                notification.save()
 
         except Exception as e:
             print "Failed to send notification. Error: %s" % str(e)
@@ -510,9 +510,15 @@ class TestMeasure(models.Model):
 
     name = models.CharField(max_length=255)
 
-    started = models.DateTimeField()
-    ended = models.DateTimeField(null=True, blank=True)
+    started = models.DateTimeField(db_index=True)
+    ended = models.DateTimeField(null=True, blank=True, db_index=True)
     success = models.IntegerField(null=True, blank=True)
+    spent_time = models.FloatField(
+        null=True,
+        blank=True,
+        editable=False,
+        default=None
+    )
     failure_reason = models.TextField(null=True, blank=True)
 
     config = models.ForeignKey('TestMeasureConfig', blank=True, null=True)
@@ -564,25 +570,21 @@ class TestMeasure(models.Model):
     # triggered,
     def update_alert_status(self):
         cnf = self.get_or_create_config()
-        
-        print "Existing status: %s" % cnf.get_alarm_status_display()
 
         # Don't check if we're already in alert status
         if cnf.alarm_status == TestMeasureConfig.ALARM_STATUS_ALARM:
             return False
 
         if self.failed_or_exceeds_threshold:
-            if cnf.alarm_status == TestMeasureConfig.ALARM_STATUS_FAILED_ONCE:
-                cnf.alarm_status = TestMeasureConfig.ALARM_STATUS_ALARM
-            else:
-                cnf.alarm_status = TestMeasureConfig.ALARM_STATUS_FAILED_ONCE
-            cnf.save()
+            cnf.increase_alarm_status()
         else:
-            if cnf.alarm_status != TestMeasureConfig.ALARM_STATUS_NORMAL:
-                cnf.alarm_status = TestMeasureConfig.ALARM_STATUS_NORMAL
-                cnf.save()
+            cnf.reset_alarm_status()
 
         return cnf.alarm_status == TestMeasureConfig.ALARM_STATUS_ALARM
+
+    def save(self, *args, **kwargs):
+        self.spent_time = self.measure_time()
+        return super(TestMeasure, self).save(*args, **kwargs)
 
     @property
     def failed_or_exceeds_threshold(self):
@@ -597,8 +599,6 @@ class TestMeasure(models.Model):
         cnf = self.get_or_create_config()
         threshold = cnf.failure_threshold
 
-        print "%s vs %s" % (time, threshold)
-
         if threshold is None:
             return False
 
@@ -611,7 +611,7 @@ class TestMeasureConfig(models.Model):
         verbose_name_plural = u"indstillinger for målinger"
 
     test_suite = models.ForeignKey(TestSuite)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, db_index=True)
 
     failure_threshold = models.FloatField(
         blank=True,
@@ -642,6 +642,19 @@ class TestMeasureConfig(models.Model):
         default=None,
         editable=False
     )
+
+    def increase_alarm_status(self):
+        if self.alarm_status == TestMeasureConfig.ALARM_STATUS_NORMAL:
+            self.alarm_status = TestMeasureConfig.ALARM_STATUS_FAILED_ONCE
+            self.save()
+        elif self.alarm_status == TestMeasureConfig.ALARM_STATUS_FAILED_ONCE:
+            self.alarm_status = TestMeasureConfig.ALARM_STATUS_ALARM
+            self.save()
+
+    def reset_alarm_status(self):
+        if self.alarm_status != TestMeasureConfig.ALARM_STATUS_NORMAL:
+            self.alarm_status = TestMeasureConfig.ALARM_STATUS_NORMAL
+            self.save()
 
     @classmethod
     def get_or_create(cls, test_suite, name):

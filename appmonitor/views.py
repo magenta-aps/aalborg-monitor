@@ -40,58 +40,63 @@ class TestSuiteDetailView(DetailView):
     context_object_name = 'testsuite'
     form = None
 
+    def tz_and_dateify(self, date):
+        if not date:
+            return None
+
+        return timezone.datetime(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+            hour=0,
+            minute=0,
+            tzinfo=timezone.get_current_timezone()
+        )
+
     def get_context_data(self, **kwargs):
         today = timezone.now().date()
         one_week_ago = today - datetime.timedelta(days=7)
 
         context = super(TestSuiteDetailView, self).get_context_data(**kwargs)
-        # context['form'] = TestSuiteDetailForm(kwargs)
+
         context['form'] = self.get_form()
-        context['result_overview_from'] = self.request.GET.get("result_overview_from")
-        context['result_overview_to'] = self.request.GET.get("result_overview_to")
-        context['executed_tests_from'] = self.request.GET.get("executed_tests_from")
-        context['executed_tests_to'] = self.request.GET.get("executed_tests_to")
+        cdata = context['form'].cleaned_data
 
-        if context['result_overview_from'] is None or context['result_overview_from'] == '':
-            result_overview_from = one_week_ago
-        else:
-            result_overview_from = datetime.datetime.strptime(context['result_overview_from'], '%d-%m-%Y')
+        context['result_overview_from'] = cdata.get("result_overview_from")
+        context['result_overview_to'] = cdata.get("result_overview_to")
+        context['executed_tests_from'] = cdata.get("executed_tests_from")
+        context['executed_tests_to'] = cdata.get("executed_tests_to")
 
-        if context['result_overview_to'] is None or context['result_overview_to'] == '':
-            result_overview_to = None
-        else:
-            result_overview_to = datetime.datetime.strptime(context['result_overview_to'], '%d-%m-%Y')
+        result_overview_from = self.tz_and_dateify(
+            context['result_overview_from']
+        )
+        result_overview_to = self.tz_and_dateify(
+            context['result_overview_to']
+        )
+        executed_tests_from = self.tz_and_dateify(
+            context['executed_tests_from']
+        )
+        executed_tests_to = self.tz_and_dateify(
+            context['executed_tests_to']
+        )
 
-        if context['executed_tests_from'] is None or context['executed_tests_from'] == '':
-            executed_tests_from = one_week_ago
-        else:
-            executed_tests_from = datetime.datetime.strptime(context['executed_tests_from'], '%d-%m-%Y')
-
-        if context['executed_tests_to'] is None or context['executed_tests_to'] == '':
-            executed_tests_to = None
-        else:
-            executed_tests_to = datetime.datetime.strptime(context['executed_tests_to'], '%d-%m-%Y')
 
         if self.object:
             context['test_data'] = self.object.test_data(
                 result_overview_from,
                 result_overview_to
             )
-            if executed_tests_from and executed_tests_to:
-                context['runs'] = self.object.testrun_set.filter(
-                    started__gte=executed_tests_from,
-                    started__lte=executed_tests_to
-                ).order_by('-started')
-            elif executed_tests_from:
-                context['runs'] = self.object.testrun_set.filter(
-                    started__gte=executed_tests_from,
-                ).order_by('-started')
-            elif executed_tests_to:
-                context['runs'] = self.object.testrun_set.filter(
-                    started__gte=executed_tests_to,
-                ).order_by('-started')
-            else:
-                context['runs'] = self.object.testrun_set.order_by('-started')
+
+
+            qs = self.object.testrun_set
+            if executed_tests_from:
+                qs = qs.filter(started__gte=executed_tests_from)
+            if executed_tests_to:
+                qs = qs.filter(
+                    started__lt=executed_tests_to + datetime.timedelta(days=1)
+                )
+
+            context['runs'] = qs.order_by('-started')
 
         return context
 

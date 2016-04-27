@@ -1,4 +1,6 @@
 from django import forms
+from django.utils import timezone
+from datetime import timedelta
 
 
 class TestSuiteDetailForm(forms.Form):
@@ -24,7 +26,14 @@ class TestSuiteDetailForm(forms.Form):
     )
 
     def __init__(self, qdict, *args, **kwargs):
+
+        if 'executed_tests_from' not in qdict:
+            qdict = qdict.copy()
+            seven_days_ago = (timezone.now() - timedelta(days=7))
+            qdict['executed_tests_from'] = seven_days_ago.strftime('%d-%m-%Y')
+
         super(TestSuiteDetailForm, self).__init__(qdict, *args, **kwargs)
+
         extra_classes = {
             'result_overview_from': 'datepicker',
             'result_overview_to': 'datepicker',

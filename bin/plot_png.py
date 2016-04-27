@@ -96,7 +96,7 @@ def plot_png(argsdict):
 
     fig, ax = plt.subplots()
 
-    if config.alart_status == TestMeasureConfig.ALARM_STATUS_ALARM:
+    if config.alarm_status == TestMeasureConfig.ALARM_STATUS_ALARM:
         ax.set_axis_bgcolor((1, 0.5, 0.5))
 
     try:

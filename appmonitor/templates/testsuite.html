@@ -155,6 +155,8 @@
     $('.datepicker').datepicker({
         language: 'da',
         format: "dd-mm-yyyy",
+    }).on('changeDate', function(e){
+        $(this).datepicker('hide');
     });
 })(jQuery)
 //--></script>
