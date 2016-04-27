@@ -16,15 +16,19 @@ Afviklingen af testen startede {{ testrun.started |date:'Y-m-d H:i:s' }}\
  og sluttede {{ testrun.ended |date:'Y-m-d H:i:s' }}\
 {% endif %}\
 .
-{% if measure %}\
+{% if failed_measures %}\
 
-Fejlen opstod under afvikling af målingen "{{ measure.name }}".
-{% endif %}\
+Der var problemer med følgende målinger:
+{% for measure in failed_measures %}\
+
+Måling: {{ measure }}
+Problem: \
 {% if measure.failure_reason %}\
-
-Målingen rapporterede følgende fejl-besked:
-
 {{ measure.failure_reason }}\
+{% else %}\
+Målingen fejlede eller overskred den angivne tærskelværdi to gange i træk.
+{% endif %}
+{% endfor %}\
 {% else %}\
 
 Fejlen opstod enten uafhængigt af enkelte målinger eller før der blev

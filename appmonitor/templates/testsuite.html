@@ -109,7 +109,11 @@
                 {% if testrun.succeeded %}
                     <span class="label label-success">Ja</span>
                 {% else %}
+                    {% if testrun.has_alerts %}
+                    <span class="label label-warning">Ja, med alarmer</span>
+                    {% else %}
                     <span class="label label-warning">Nej</span>
+                    {% endif %}
                 {% endif %}
             </td>
             <td class="text-center">

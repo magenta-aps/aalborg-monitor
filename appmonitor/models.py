@@ -290,12 +290,14 @@ class TestRun(models.Model):
     STATUS_RUNNING = 1
     STATUS_FAILED = 2
     STATUS_COMPLETED = 3
+    STATUS_COMPLETED_WITH_ALERTS = 4
 
     STATUS_CHOICES = (
         (STATUS_CREATED, "CREATED"),
         (STATUS_RUNNING, "RUNNING"),
         (STATUS_FAILED, "FAILED"),
         (STATUS_COMPLETED, "COMPLETED"),
+        (STATUS_COMPLETED, "COMPLETED with alerts"),
     )
 
     status = models.IntegerField(
@@ -314,14 +316,22 @@ class TestRun(models.Model):
             self.status = TestRun.STATUS_FAILED
         else:
             self.status = TestRun.STATUS_COMPLETED
+
         self.exitstatus = exitstatus
         self.ended = timezone.now()
+
         self.save()
 
-        self.notify_contactpersons()
+        self.check_alerts()
 
     def succeeded(self):
-        return self.exitstatus is not None and self.exitstatus == 0
+        return (
+            self.exitstatus is not None and self.exitstatus == 0 and
+            not self.has_alerts()
+        )
+
+    def has_alerts(self):
+        return self.status == TestRun.STATUS_COMPLETED_WITH_ALERTS
 
     def create_measure(self, name, failure_threshold=None):
         measure = TestMeasure()
@@ -372,34 +382,43 @@ class TestRun(models.Model):
         else:
             return None
 
-    def notify_contactpersons(self):
+    def check_alerts(self):
+        alarms = []
+
+        for x in self.testmeasure_set.all():
+            print "Checking %s" % x.name
+            if x.update_alert_status():
+                alarms.append(x)
+
+        if len(alarms) > 0:
+            if self.status == TestRun.STATUS_COMPLETED:
+                self.status = TestRun.STATUS_COMPLETED_WITH_ALERTS
+                self.save()
+            self.notify_contactpersons(alarms)
+
+
+    def notify_contactpersons(self, failed_measures=[]):
         # Only notify if something went wrong
-        if self.status != TestRun.STATUS_FAILED:
+        if self.status not in [
+            TestRun.STATUS_FAILED, TestRun.STATUS_COMPLETED_WITH_ALERTS
+        ]:
             return
 
-        measure = self.get_failed_measure()
+        # If we have no specifically failed measures the whole run must have
+        # failed before running any measures. In this case check if a previous
+        # message has been sent out within the last 24 hours and skip sending
+        # if that is the case.
+        if len(failed_measures) == 0:
+            one_day_ago = timezone.now() - timezone.timedelta(1)
 
-        one_day_ago = timezone.now() - timezone.timedelta(1)
+            notifications = ErrorNotification.objects.filter(
+                test_suite=self.test_suite,
+                when__gte=one_day_ago,
+                failed_measure=None
+            )[:1]
 
-        # Check if a similar notification has been sent withing the last day
-        filter = {
-            'test_suite': self.test_suite,
-            'when__gte': one_day_ago
-        }
-        if measure is None:
-            # Search for a notification failure without an associated
-            # measure
-            filter['failed_measure'] = None
-        else:
-            # Search for a notification with the same name and message
-            # as the current one
-            filter['failed_measure__name'] = measure.name
-            filter['failed_measure__failure_reason'] = measure.failure_reason
-
-        notifications = ErrorNotification.objects.filter(**filter)[:1]
-
-        if len(notifications) > 0:
-            return
+            if len(notifications) > 0:
+                return
 
         try:
             # Find out who we need to contact
@@ -416,7 +435,7 @@ class TestRun(models.Model):
                 'testrun': self,
                 'testsuite': self.test_suite,
                 'contactpersons': contactpersons,
-                'measure': measure,
+                'failed_measures': failed_measures,
                 'systemname': platform.node()
             }
             content = template.render(context)
@@ -440,12 +459,11 @@ class TestRun(models.Model):
             notification = ErrorNotification()
             notification.when = timezone.now()
             notification.test_suite = self.test_suite
-            notification.failed_measure = measure
+            notification.failed_measure = None
             notification.save()
 
         except Exception as e:
             print "Failed to send notification. Error: %s" % str(e)
-
 
     @classmethod
     def fix_failed_processes(cls):
@@ -458,7 +476,6 @@ class TestRun(models.Model):
             r.exitstatus = -1
             if r.testmeasure_set.count() > 0:
                 r.fix_ended_time()
-            self.notify_contactpersons()
 
 
 class TestMeasure(models.Model):
@@ -514,6 +531,56 @@ class TestMeasure(models.Model):
             cnf.failure_threshold = value;
             cnf.save()
 
+    def get_previous_run(self):
+        return TestRun.objects.filter(
+            test_suite=self.test_suite,
+            pk__lt=self.pk
+        ).order_by('-pk').first()
+
+    # Sets alarm if this measure and the previous one exceeds the configured
+    # threshold. Returns a boolean specifying whether a new alert was
+    # triggered,
+    def update_alert_status(self):
+        cnf = self.get_or_create_config()
+        
+        print "Existing status: %s" % cnf.get_alarm_status_display()
+
+        # Don't check if we're already in alert status
+        if cnf.alarm_status == TestMeasureConfig.ALARM_STATUS_ALARM:
+            return False
+
+        if self.failed_or_exceeds_threshold:
+            if cnf.alarm_status == TestMeasureConfig.ALARM_STATUS_FAILED_ONCE:
+                cnf.alarm_status = TestMeasureConfig.ALARM_STATUS_ALARM
+            else:
+                cnf.alarm_status = TestMeasureConfig.ALARM_STATUS_FAILED_ONCE
+            cnf.save()
+        else:
+            if cnf.alarm_status != TestMeasureConfig.ALARM_STATUS_NORMAL:
+                cnf.alarm_status = TestMeasureConfig.ALARM_STATUS_NORMAL
+                cnf.save()
+
+        return cnf.alarm_status == TestMeasureConfig.ALARM_STATUS_ALARM
+
+    @property
+    def failed_or_exceeds_threshold(self):
+        if self.success == 0:
+            return True
+
+        time = self.measure_time()
+
+        if time is None:
+            return False
+        
+        cnf = self.get_or_create_config()
+        threshold = cnf.failure_threshold
+
+        print "%s vs %s" % (time, threshold)
+
+        if threshold is None:
+            return False
+
+        return time >= threshold
 
 class TestMeasureConfig(models.Model):
 
@@ -533,15 +600,25 @@ class TestMeasureConfig(models.Model):
 
     ALARM_STATUS_NORMAL = 0
     ALARM_STATUS_ALARM = 1
+    ALARM_STATUS_FAILED_ONCE = 2
 
     alarm_status_choices = (
         (ALARM_STATUS_NORMAL, u"Normal"),
-        (ALARM_STATUS_ALARM, u"Alarm")
+        (ALARM_STATUS_FAILED_ONCE, u"Fejlet én gang"),
+        (ALARM_STATUS_ALARM, u"Alarm"),
     )
 
-    alart_status = models.IntegerField(
+    alarm_status = models.IntegerField(
         choices=alarm_status_choices,
         default=ALARM_STATUS_NORMAL
+    )
+
+    alarm_triggered_by = models.ForeignKey(
+        TestMeasure,
+        null=True,
+        blank=True,
+        default=None,
+        editable=False
     )
 
     @classmethod
@@ -594,7 +671,11 @@ class ErrorNotification(models.Model):
         verbose_name_plural = u"registrede fejlbeskeder"
         
     test_suite = models.ForeignKey(TestSuite)
-    failed_measure = models.ForeignKey(TestMeasure, blank=True)
+    failed_measure = models.ForeignKey(
+        TestMeasure,
+        blank=True,
+        null=True
+    )
     when = models.DateTimeField()
 
     def __unicode__(self):
