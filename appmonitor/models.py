@@ -431,7 +431,6 @@ class TestRun(models.Model):
         except Exception as e:
             print "Failed to send notification. Error: %s" % str(e)
 
-
     @classmethod
     def fix_failed_processes(cls):
         for r in cls.objects.filter(status=cls.STATUS_RUNNING):
@@ -444,6 +443,12 @@ class TestRun(models.Model):
             if r.testmeasure_set.count() > 0:
                 r.fix_ended_time()
             self.notify_contactpersons()
+
+    def get_screenshot(self):
+        if self.screenshot_set.count() > 0:
+            return self.screenshot_set.first().file_name
+        else:
+            return None
 
 
 class TestMeasure(models.Model):
@@ -536,4 +541,4 @@ class ScreenShot(models.Model):
     test_run = models.ForeignKey(TestRun)
     measure_name = models.TextField()
     file_name = models.TextField()
-
+    file_path = models.TextField()

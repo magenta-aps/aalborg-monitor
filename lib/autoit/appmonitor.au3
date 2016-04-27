@@ -505,26 +505,28 @@ Func AppmonitorExitWithError($iError)
 EndFunc
 
 Func AppmonitorScreenCapture_SaveImage()
-    Local $sScreenshotsDir = _PathFull(@ScriptDir & "..\..\..\aalborgmonitor\static\screenshots\")
+    Local $sScreenshotsDir = _PathFull(@ScriptDir & "..\..\..\aalborg-monitor\appmonitor\static\screenshots\")
     If Not $sScreenshotsDir Then
         ConsoleWriteError("Could not get $sScreenshotsDir")
         Exit -1
     EndIf
     Local $hBmp
+    ; FileName: 20160427092350.jpg
+    Local $sFileName = @year & @mon & @mday & "T" & @hour & @min & @sec & ".jpg"
     ; Full path to file: C:\...\...\*.jpg
-    Local $sFile = $sScreenshotsDir & @year & @mon & @mday & "T" & @hour & @min & @sec & ".jpg"
+    Local $sFilePath = $sScreenshotsDir & $sFileName
 
     ; Capture full screen
     $hBmp = _ScreenCapture_Capture("")
 
     ; Save bitmap to file
-    _ScreenCapture_SaveImage($sFile, $hBmp)
+    _ScreenCapture_SaveImage($sFilePath, $hBmp)
 
     ; Save record in database
-    AppmonitorInsertScreenshotRecord($sFile)
+    AppmonitorInsertScreenshotRecord($sFilePath, $sFileName)
 EndFunc
 
-Func AppmonitorInsertScreenshotRecord($sFile)
+Func AppmonitorInsertScreenshotRecord($sFilePath, $sFileName)
     Local $hAppmonitorDb = AppmonitorGetDbHandle()
     Local $iAppmonitorRun = AppmonitorGetRun()
     Local $iAppmonitorMeasure = AppmonitorGetMeasure()
@@ -532,11 +534,12 @@ Func AppmonitorInsertScreenshotRecord($sFile)
 
     Local $sSQL = "" & _
         "INSERT INTO appmonitor_screenshot " & _
-        "(run_id_id, measure_name, file_name) " & _
+        "(test_run_id, measure_name, file_name, file_path) " & _
         "VALUES (" & _
             $iAppmonitorRun & ", " & _
             _SQLite_FastEscape($sAppmonitorMeasureName) & ", " & _
-            _SQLite_FastEscape($sFile) & _
+            _SQLite_FastEscape($sFileName) & ", " & _
+            _SQLite_FastEscape($sFilePath) & _
         ")"
     ConsoleWrite($sSQL)
     Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)

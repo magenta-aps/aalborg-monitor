@@ -74,12 +74,13 @@ class AppmonitorTestCase(unittest.TestCase):
                 )
             )
             file_name = '%s.png' % datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
-            path = os.path.join(aalborg_monitor_root, 'aalborgmonitor', 'static', 'screenshots', file_name)
+            path = os.path.join(aalborg_monitor_root, 'appmonitor', 'static', 'screenshots', file_name)
             self.driver.get_screenshot_as_file(path)
             screenshot = ScreenShot(
                 test_run= self.test_run,
                 measure_name=self.test_run.get_failed_measure().name,
-                file_name=path
+                file_name=file_name,
+                file_path=path
             )
             screenshot.save()
 
