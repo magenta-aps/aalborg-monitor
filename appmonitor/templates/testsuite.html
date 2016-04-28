@@ -141,6 +141,13 @@
                    class="rowclicktarget btn btn-default" role="button"
                    ><span class="glyphicon glyphicon-list-alt"></span
                 ></a>
+                {% if not testrun.succeeded %}
+                    {% load staticfiles %}
+                    <a href="{% static 'screenshots/' %}{{ testrun.get_screenshot }}"
+                       class="btn btn-default" role="button"
+                       ><span class="glyphicon glyphicon-picture"></span>
+                    </a>
+                {% endif %}
             </td>
         </tr>
     {% endfor %}

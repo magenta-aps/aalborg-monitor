@@ -20,6 +20,7 @@
 #include <Array.au3>
 #include <SQLite.au3>
 #include <SQLite.dll.au3>
+#include <ScreenCapture.au3>
 
 Local $__AppmonitorDbHandle
 Local $__AppminotorRun
@@ -503,8 +504,56 @@ Func AppmonitorExitWithError($iError)
     Exit($iError)
 EndFunc
 
+Func AppmonitorScreenCapture_SaveImage()
+    Local $sScreenshotsDir = _PathFull(@ScriptDir & "..\..\..\aalborg-monitor\appmonitor\static\screenshots\")
+    If Not $sScreenshotsDir Then
+        ConsoleWriteError("Could not get $sScreenshotsDir")
+        Exit -1
+    EndIf
+    Local $hBmp
+    ; FileName: 20160427092350.jpg
+    Local $sFileName = @year & @mon & @mday & "T" & @hour & @min & @sec & ".jpg"
+    ; Full path to file: C:\...\...\*.jpg
+    Local $sFilePath = $sScreenshotsDir & $sFileName
+
+    ; Capture full screen
+    $hBmp = _ScreenCapture_Capture("")
+
+    ; Save bitmap to file
+    _ScreenCapture_SaveImage($sFilePath, $hBmp)
+
+    ; Save record in database
+    AppmonitorInsertScreenshotRecord($sFilePath, $sFileName)
+EndFunc
+
+Func AppmonitorInsertScreenshotRecord($sFilePath, $sFileName)
+    Local $hAppmonitorDb = AppmonitorGetDbHandle()
+    Local $iAppmonitorRun = AppmonitorGetRun()
+    Local $iAppmonitorMeasure = AppmonitorGetMeasure()
+    Local $sAppmonitorMeasureName = AppmonitorGetMeasureName($iAppmonitorMeasure)
+
+    Local $sSQL = "" & _
+        "INSERT INTO appmonitor_screenshot " & _
+        "(test_run_id, measure_name, file_name, file_path) " & _
+        "VALUES (" & _
+            $iAppmonitorRun & ", " & _
+            _SQLite_FastEscape($sAppmonitorMeasureName) & ", " & _
+            _SQLite_FastEscape($sFileName) & ", " & _
+            _SQLite_FastEscape($sFilePath) & _
+        ")"
+    ConsoleWrite($sSQL)
+    Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)
+    If $iResult == $SQLITE_OK Then
+        Return
+    Else
+        ConsoleWriteError("SQLite Error: Failed to insert ScreenShot!")
+        Exit -1
+    EndIf
+EndFunc
+
 Func AppmonitorCheckError($iError)
     If $iError <> 0 Then
+        AppmonitorScreenCapture_SaveImage()
         AppmonitorExitWithError($iError)
     EndIf
 EndFunc

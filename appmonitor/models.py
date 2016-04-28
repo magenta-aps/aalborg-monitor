@@ -499,6 +499,12 @@ class TestRun(models.Model):
             if r.testmeasure_set.count() > 0:
                 r.fix_ended_time()
 
+    def get_screenshot(self):
+        if self.screenshot_set.count() > 0:
+            return self.screenshot_set.first().file_name
+        else:
+            return None
+
 
 class TestMeasure(models.Model):
 
@@ -699,6 +705,7 @@ class ConfigurationValue(models.Model):
     def __unicode__(self):
         return self.name
 
+
 class ErrorNotification(models.Model):
 
     class Meta:
@@ -715,3 +722,10 @@ class ErrorNotification(models.Model):
 
     def __unicode__(self):
         return self.test_suite.name + ": " + str(self.when)[:19]
+
+
+class ScreenShot(models.Model):
+    test_run = models.ForeignKey(TestRun)
+    measure_name = models.TextField()
+    file_name = models.TextField()
+    file_path = models.TextField()
