@@ -26,14 +26,20 @@ DPI = 100
 def parse_date_arg(arg):
     if not arg:
         return None
-    parts = str(arg).split("-")
+
+    try:
+        parts = [int(x) for x in str(arg).split("-")]
+    except:
+        parts = []
+
     if len(parts) < 3:
         return None
+
     return timezone.datetime(
         day=parts[0],
         month=parts[1],
         year=parts[2],
-        tzinfo=timezone.get_current_timezone()
+        tzinfo=timezone.get_default_timezone()
     )
 
 def plot_png(argsdict):
@@ -96,8 +102,10 @@ def plot_png(argsdict):
 
     fig, ax = plt.subplots()
 
+    alarmstate=0
     if config.alarm_status == TestMeasureConfig.ALARM_STATUS_ALARM:
         ax.set_axis_bgcolor((1, 0.5, 0.5))
+        alarmstate=1
 
     try:
         xsize = int(argsdict.get('xsize', 800))
@@ -175,7 +183,7 @@ def plot_png(argsdict):
     ax.xaxis.set_major_formatter(DateFormatter("%Y-%m-%d %H:%M"))
 
     yaxis_scale = 1.1 if fullscreen else 1.2
-    
+
     ax.set_ylim(bottom = 0, top = max_measure * yaxis_scale)
     ax.set_xlim(
         min_date - datetime.timedelta(minutes = 15),
@@ -212,15 +220,18 @@ def plot_png(argsdict):
 
     fig.savefig(full_path_fname, format='png', dpi=DPI)
 
-    return full_path_fname
+    result = QueryDict('', mutable=True, encoding='utf8')
+    result.update({
+        'fname': full_path_fname,
+        'alarm': alarmstate
+    })
+
+    return result.urlencode(safe='/%')
 
 if __name__ == '__main__':
     qstring = sys.argv[1]
     qdict = QueryDict(qstring, mutable=True, encoding='utf8')
-    fname = plot_png(qdict)
-    result = QueryDict('', mutable=True, encoding='utf8')
-    result.update({'fname': fname})
-    print result.urlencode(safe='/%')
+    print plot_png(qdict)
 
     
     

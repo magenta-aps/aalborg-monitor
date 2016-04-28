@@ -20,6 +20,16 @@ table.table-clickablerows tr {
     margin: 1em;
 }
 
+ul.dropdown-menu.changemeasure {
+    height: auto;
+    max-height: 500px;
+    overflow-x: auto;
+}
+
+button.cancelalarm {
+    display: none;
+}
+
 #measureimage.fullscreen {
     position: fixed;
     top: 0;

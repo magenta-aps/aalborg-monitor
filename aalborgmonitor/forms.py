@@ -50,3 +50,4 @@ class TestSuiteDetailForm(forms.Form):
                 ) if x
             ])
             f.widget.attrs['data-provide'] = "datepicker"
+

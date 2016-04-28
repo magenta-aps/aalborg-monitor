@@ -13,6 +13,26 @@
 <h1>Måling '{{ testsuite.name }}' - '{{ mname }}'</h1>
 <div>
     <form action="" method="get">
+        <div class="btn-group pull-right">
+            <button class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown">
+                Skift måling
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu changemeasure pull-right">
+                {% for m in own_measures %}
+                <li><a href="{% url 'appmonitor:measure' m.test_run__test_suite__pk m.name %}">{{ m.test_run__test_suite__name }}: {{ m.name }}</a>
+                {% endfor %}
+                <li class="divider"></li>
+                {% for m in other_measures %}
+                <li><a href="{% url 'appmonitor:measure' m.test_run__test_suite__pk m.name %}">{{ m.test_run__test_suite__name }}: {{ m.name }}</a>
+                {% endfor %}
+            </ul>
+            <button class="cancelalarm btn btn-success btn-sm">
+                <span class="glyphicon glyphicon-ok-circle"></span>
+                Afblæs alarm
+            </button>
+        </div>
+
         <div>
             <label for="target_input">Målsætning:</label>
             <div>
@@ -24,55 +44,93 @@
                 <a href="{% url 'admin:appmonitor_testmeasureconfig_change' measureconfig.pk %}" onclick="this.target='_blank'" class="btn btn-primary btn-xs">Rediger <span class="glyphicon glyphicon-new-window"></span></a>
             </div>
         </div>
-        <h3>Referencemåling:</h3>
-        <div>
-            <label for="from">Fra:</label>
-            <input id="from" class="datepicker" data-provide="datepicker">
-            <label for="to">Til:</label>
-            <input id="to" class="datepicker" data-provide="datepicker">
-            <!--<select id="days" name="days">-->
-                <!--<option {% if days == '1' %}selected="selected"{% endif %} value="1">Seneste døgn</option>-->
-                <!--<option {% if days == '3' %}selected="selected"{% endif %} value="3">Seneste 3 døgn</option>-->
-                <!--<option {% if days == '7' %}selected="selected"{% endif %} value="7">Seneste uge</option>-->
-                <!--<option {% if days == '30' %}selected="selected"{% endif %} value="30">Sidste måned</option>-->
-            <!--</select>-->
-        </div>
-        <div>
+        <br />
+        <dl>
+            <dt>Tidsafgrænsning:</dt>
+            <dd>
+                <label for="days">Målinger fra:</label>
+                <select id="days" name="days">
+                    {% for o in days_choices %}
+                    <option
+                        value="{{ o.value }}"
+                        {% if o.selected %}
+                        selected="selected"
+                        {% endif %}
+                    >{{ o.text }}</option>
+                    {% endfor %}
+                </select>
+                <div id="manualtime"{% if days != view.BY_DAYS_MANUAL %} style="display: none"{% endif %}>
+                    <div>
+                    <label for="from">Fra:</label>
+                    <input id="from" name="from" class="datepicker" data-provide="datepicker" value="{{ request.GET.from }}">
+                    </div>
+
+                    <div>
+                    <label for="to">Til:</label>
+                    <input id="to" name="to" class="datepicker" data-provide="datepicker" value="{{ request.GET.to }}">
+                    </div>
+                </div>
+            </dd>
+            <dt>Referencemåling:</dt>
             <label for="cmp_ts">Testsuite:</label>
-            <select id="cmp_ts" name="cmp_ts" data-selected="{{ request.GET.cmp_ts}}">
-                <option value="">[Vælg testsuite]</option>
-                {% for ts in cmp_data %}
-                <option value="{{ ts.pk }}">{{ ts.name }}</option>
-                {% endfor %}
-            </select>
-            <label for="cmp_measure">Måling:</label>
-            <select id="cmp_measure" name="cmp" data-selected="{{ request.GET.cmp|safe }}">
-            </select>
-        </div>
-        <input type="hidden" name="from" value="{{from}}" />
-        <input type="hidden" name="to" value="{{to}}" />
-        <input type="submit" value="Opdater" />
+                <select id="cmp_ts" name="cmp_ts" data-selected="{{ request.GET.cmp_ts }}">
+                    <option value="">[Vælg testsuite]</option>
+                    {% for ts in cmp_data %}
+                    <option value="{{ ts.pk }}">{{ ts.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="cmp_measure">Måling:</label>
+                <select id="cmp_measure" name="cmp" data-selected="{{ request.GET.cmp|safe }}">
+                </select>
+            <dd>
+            <dt>Automatisk opdatering:</dt>
+                <select id="autoupdate" name="autoupdate">
+                    <option value="1"{% if autoupdate == "1" %} selected="selceted"{% endif %}>Hvert minut</option>
+                    <option value="10"{% if autoupdate == "10" %} selected="selceted"{% endif %}>Hver 10 minutter</option>
+                    <option value="30"{% if autoupdate == "30" %} selected="selceted"{% endif %}>Hver halve time</option>
+                    <option value="60"{% if autoupdate == "60" %} selected="selceted"{% endif %}>Hver time</option>
+                    <option value=""{% if autoupdate == "" %} selected="selceted"{% endif %}>Ingen opdatering</option>
+                </select>
+                <input type="button" value="Opdater nu" id="optimg" class="btn btn-primary btn-xs"/>
+            <dd>
+            </dd>
+        </dl>
+        <input type="submit" value="Opdater" class="btn btn-primary" />
     </form>
 </div>
 <p>
     Klik på billedet for at åbne fuldskærms visning.
 </p>
 <div id="measureimage" class="">
+
     <div class="fullscreen-controls btn-group" role="group">
-        <button class="btn btn-primary btn-sm">
+        <button class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown">
+            Vis anden måling
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu changemeasure pull-right">
+            {% for m in own_measures %}
+            <li><a href="{% url 'appmonitor:measure' m.test_run__test_suite__pk m.name %}?autofullscreen=yes">{{ m.test_run__test_suite__name }}: {{ m.name }}</a>
+            {% endfor %}
+            <li class="divider"></li>
+            {% for m in other_measures %}
+            <li><a href="{% url 'appmonitor:measure' m.test_run__test_suite__pk m.name %}?autofullscreen=yes">{{ m.test_run__test_suite__name }}: {{ m.name }}</a>
+            {% endfor %}
+        </ul>
+        <button class="btn btn-primary btn-sm" id="optimg2">
             <span class="glyphicon glyphicon-refresh"></span>
             Opdatér
         </button>
-        <button class="btn btn-success btn-sm">
+        <button class="cancelalarm btn btn-success btn-sm">
             <span class="glyphicon glyphicon-ok-circle"></span>
             Afblæs alarm
         </button>
-        <button class="btn btn-primary btn-sm">
+        <button class="btn btn-primary btn-sm" id="closeimg">
             <span class="glyphicon glyphicon-remove"></span>
-            Luk
+            Luk fuldskærm
         </button>
     </div>
-    <img src="{% url 'appmonitor:png' testsuite.pk mname %}?{{ qstring_copy }}"
+    <img src="{% url 'appmonitor:png' testsuite.pk mname %}?{{ img_args }}"
          width="100%" />
 </div>
 {% endblock %}
@@ -111,6 +169,38 @@
     
     var $div = $('#measureimage'),
         $img = $('#measureimage img').first();
+
+
+    function update_image_src() {
+        var org_src = $img.attr("src"),
+            base_src = org_src.split(/\?/, 1)[0],
+            days_val = parseInt($('#days').val()),
+            cmp_val = $('#cmp_measure').val(),
+            args = [],
+            d = new Date();
+
+        if (days_val == -2) {
+            args.push("from=" + escape($('#from').val() || ''))
+            args.push("to=" + escape($('#to').val() || ''))
+        } else if (days_val > 0) {
+            d.setTime(d.getTime() - days_val*24*60*60*1000);
+            d = [d.getDate(), d.getMonth()+1, d.getFullYear()].join("-")
+            args.push("from=" + escape(d))
+        }
+        if (cmp_val) {
+            args.push("cmp=" + escape(cmp_val))
+        }
+        if ($div.hasClass('fullscreen')) {
+            args.push("xsize=" + $div.width());
+            args.push("ysize=" + $div.height());
+            args.push("fs=1");
+        }
+        
+        args.push("ts=" + (new Date()).getTime())
+        $img.attr("src", base_src + "?" + args.join("&"))
+        return false;
+    }
+
     function toggle_fullscreen() {
         var src = $img.attr("src"),
             src_parts,
@@ -118,39 +208,22 @@
 
         $div.toggleClass('fullscreen');
         $div.removeClass('loaded');
-
-        //split src into url and querystring
-        src_parts = src.split("?", 2);
-        if (!src_parts[1]) {
-            src_parts[1] = ''
-        }
-
-        // Filter out xsize and ysize args
-        $.each(src_parts[1].split("&"), function() {
-            if (this && !this.match(/^((x|y)size|ts|fs)=/)) {
-                new_qstring.push(this)
-            }
-        });
-
-        // Add timestamp to avoid cache
-        new_qstring.push("ts=" + parseInt(new Date().getTime()/1000.0))
-        
-        // Add new size args if switching to fullscreen
-        if ($div.hasClass('fullscreen')) {
-            new_qstring.push("xsize=" + $div.width());
-            new_qstring.push("ysize=" + $div.height());
-            new_qstring.push("fs=1");
-        }
-
-        // rebuild the src
-        src_parts[1] = new_qstring.join("&")
-        $img.attr("src", src_parts.join("?"));
-
+        update_image_src()
+        return false;
     }
     $img.on('click', toggle_fullscreen)
+    $('#closeimg').on("click", toggle_fullscreen)
+    if (document.location.href.indexOf("autofullscreen") != -1) {
+        toggle_fullscreen()
+    }
     $img.on('load', function() {
         if ($div.hasClass('fullscreen') && !$div.hasClass('loaded')) {
             $div.addClass('loaded');
+        }
+        if (document.cookie.indexOf("alarm_state=1") != -1) {
+            $('button.cancelalarm').show()
+        } else {
+            $('button.cancelalarm').hide()
         }
     });
     $('.datepicker').datepicker({
@@ -159,6 +232,41 @@
     }).on('changeDate', function(e){
         $(this).datepicker('hide');
     });
+    $('#days').on("change", function() {
+        var new_val = $(this).val()
+        if (new_val == -2) {
+            $('#manualtime').show()
+        } else {
+            $('#manualtime').hide()
+        }
+    });
+
+    $('#optimg, #optimg2').on("click", function() {
+        update_image_src();
+        $('#autoupdate').trigger("change");
+    });
+
+    var autoupdater = null;
+
+    $('#autoupdate').on("change", function() {
+        var val = $(this).val()
+        if (autoupdater) {
+            clearInterval(autoupdater)
+        }
+        if (val) {
+            autoupdater = setInterval(update_image_src, val * 60 * 1000)
+        }
+    }).trigger("change");
+
+    $('button.cancelalarm').on("click", function() {
+        $.ajax({
+            'url': '{{ cancel_alarm_url }}',
+            'success': update_image_src,
+            'error': function() { alert("Kunne ikke afblæse alarm") }
+        });
+        return false;
+    });
+    
 })(jQuery)
 //--></script>
 {% endblock %}

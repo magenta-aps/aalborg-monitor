@@ -15,6 +15,7 @@
 
 
 /aalborgmonitor/local_settings.py
+/appmonitor/migrations/disabled
 
 /AutoIT
 /bin/IEDriverServer.exe
