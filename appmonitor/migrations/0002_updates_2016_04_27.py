@@ -12,6 +12,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
+            name='ScreenShot',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('measure_name', models.TextField()),
+                ('file_name', models.TextField()),
+                ('file_path', models.TextField()),
+            ],
+        ),
+        migrations.CreateModel(
             name='TestMeasureConfig',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
@@ -92,6 +101,11 @@ class Migration(migrations.Migration):
             model_name='testmeasureconfig',
             name='test_suite',
             field=models.ForeignKey(to='appmonitor.TestSuite'),
+        ),
+        migrations.AddField(
+            model_name='screenshot',
+            name='test_run',
+            field=models.ForeignKey(to='appmonitor.TestRun'),
         ),
         migrations.AddField(
             model_name='testmeasure',
