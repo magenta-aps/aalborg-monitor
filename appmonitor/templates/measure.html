@@ -11,7 +11,7 @@
 
 {% block content %}
 <h1>Måling '{{ testsuite.name }}' - '{{ mname }}'</h1>
-<div>
+<div id="measureview">
     <form action="" method="get">
         <div class="btn-group pull-right">
             <button class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown">
@@ -34,18 +34,18 @@
         </div>
 
         <div>
-            <label for="target_input">Målsætning:</label>
-            <div>
+        </div>
+        <br />
+        <dl>
+            <dt>Alarmtærskel:</dt>
+            <dd>
                 {% if measureconfig.failure_threshold %}
                 {{ measureconfig.failure_threshold }} sekunder
                 {% else %}
                 Ikke angivet
                 {% endif %}
                 <a href="{% url 'admin:appmonitor_testmeasureconfig_change' measureconfig.pk %}" onclick="this.target='_blank'" class="btn btn-primary btn-xs">Rediger <span class="glyphicon glyphicon-new-window"></span></a>
-            </div>
-        </div>
-        <br />
-        <dl>
+            </dd>
             <dt>Tidsafgrænsning:</dt>
             <dd>
                 <label for="days">Målinger fra:</label>
@@ -72,6 +72,7 @@
                 </div>
             </dd>
             <dt>Referencemåling:</dt>
+            <dd>
             <label for="cmp_ts">Testsuite:</label>
                 <select id="cmp_ts" name="cmp_ts" data-selected="{{ request.GET.cmp_ts }}">
                     <option value="">[Vælg testsuite]</option>
@@ -82,8 +83,9 @@
                 <label for="cmp_measure">Måling:</label>
                 <select id="cmp_measure" name="cmp" data-selected="{{ request.GET.cmp|safe }}">
                 </select>
-            <dd>
+            </dd>
             <dt>Automatisk opdatering:</dt>
+            <dd>
                 <select id="autoupdate" name="autoupdate">
                     <option value="1"{% if autoupdate == "1" %} selected="selceted"{% endif %}>Hvert minut</option>
                     <option value="10"{% if autoupdate == "10" %} selected="selceted"{% endif %}>Hver 10 minutter</option>
@@ -92,7 +94,6 @@
                     <option value=""{% if autoupdate == "" %} selected="selceted"{% endif %}>Ingen opdatering</option>
                 </select>
                 <input type="button" value="Opdater nu" id="optimg" class="btn btn-primary btn-xs"/>
-            <dd>
             </dd>
         </dl>
         <input type="submit" value="Opdater" class="btn btn-primary" />

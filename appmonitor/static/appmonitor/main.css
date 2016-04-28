@@ -2,10 +2,6 @@ table.table-clickablerows tr {
     cursor: pointer;
 }
 
-#measureimageasdf {
-    position: relative;
-}
-
 #measureimage img {
     max-width: 800px;
     cursor: pointer;
@@ -47,4 +43,8 @@ button.cancelalarm {
 
 #measureimage.fullscreen.loaded img {
     max-width: none;
+}
+
+#measureview dd {
+    margin-left: 1em;
 }
