@@ -57,3 +57,12 @@ Et eksempel på en komplet måling, der gør brug af ovenstående:
     AppmonitorCheckError(@error, "Kunne ikke finde main-search element på aalborg.dk")
 
 [](_ comment to disable wrong highligting in Komodo Edit)
+
+Det er muligt at angive en standard alarmtærskel for en måling som andet
+argument til `AppmonitorCreateMeasure`, for eksemepel:
+
+    AppmonitorCreateMeasure($oIE, "Min måling", 5.5)
+
+for en måling med en tærkskelværdi på 5,5 sekunder. Denne værdi vil kun blive
+registreret første gang målingen afvikles. Efterfølgende ændringer til
+tærskelværdien for målingen vil skulle laves via administrationsinterfacet.

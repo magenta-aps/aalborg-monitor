@@ -7,4 +7,8 @@
             document.location.href = url
         }
     });
+    $('a.screenshotlink').on("click", function(e) {
+        this.target='_blank';
+        e.stopPropagation();
+    });
 })(jQuery);

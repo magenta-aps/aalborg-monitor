@@ -51,3 +51,12 @@ Et eksempel på en Selenium-måling:
     except:
         raise Exception("Kunne ikke finde main-search element på aalborg.dk")
     self.end_measure()
+
+Det er muligt at angive en standard alarmtærskel for en måling som andet
+argument til `start_measure`, for eksemepel:
+
+    self.start_measure("Min måling", 5.5)
+
+for en måling med en tærkskelværdi på 5,5 sekunder. Denne værdi vil kun blive
+registreret første gang målingen afvikles. Efterfølgende ændringer til
+tærskelværdien for målingen vil skulle laves via administrationsinterfacet.

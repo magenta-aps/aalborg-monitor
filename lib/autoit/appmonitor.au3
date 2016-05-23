@@ -20,6 +20,7 @@
 #include <Array.au3>
 #include <SQLite.au3>
 #include <SQLite.dll.au3>
+#include <ScreenCapture.au3>
 
 Local $__AppmonitorDbHandle
 Local $__AppminotorRun
@@ -264,7 +265,7 @@ Func AppmonitorGetMeasureError($iMeasureId = -1)
     Return $__AppmonitorMeasureError
 EndFunc
 
-Func AppmonitorCreateMeasure($sName, $iAppmonitorRun = -1)
+Func AppmonitorCreateMeasure($sName, $iFailureThreshold = -1, $iAppmonitorRun = -1)
     $hAppmonitorDb = AppmonitorGetDbHandle()
     If $iAppmonitorRun == -1 Then
         $iAppmonitorRun = AppmonitorGetRun()
@@ -284,6 +285,7 @@ Func AppmonitorCreateMeasure($sName, $iAppmonitorRun = -1)
         ConsoleWrite("Started measure '" & $sName & "' [" & $iId & "]" & @CRLF)
         AppmonitorSetMeasureData($iId, $sName)
         $__AppmonitorMeasureError = ""
+        AppmonitorUpdateFailureThreshold($iAppmonitorRun, $sName, $iFailureThreshold)
         Return $iId
     Else
         ConsoleWriteError("SQLite Error: Failed create measure query")
@@ -291,6 +293,73 @@ Func AppmonitorCreateMeasure($sName, $iAppmonitorRun = -1)
     EndIf
     Return 0
 EndFunc
+
+Func AppmonitorUpdateFailureThreshold($iAppmonitorRun, $sName, $iValue)
+    if $iValue == -1 Then
+        Return
+    EndIf
+
+    $hAppmonitorDb = AppmonitorGetDbHandle()
+    If $iAppmonitorRun == -1 Then
+        $iAppmonitorRun = AppmonitorGetRun()
+    EndIf
+
+    Local $hQuery, $aRow, $iSuccess
+    $iSuccess = _SQLite_Query($hAppmonitorDb, _
+        "SELECT " & _
+        " COALESCE(cnf.id, -1) id, " & _
+        " COALESCE(cnf.failure_threshold, -1) val, " & _
+        " tr.test_suite_id ts_id " & _
+        "FROM " & _
+        " appmonitor_testrun tr " & _
+        " left join appmonitor_testmeasureconfig cnf on (" & _
+        "  cnf.test_suite_id=tr.test_suite_id " & _
+        "  AND cnf.name=" & _SQLite_Escape($sName) & _
+        " ) " & _
+        "WHERE tr.id=" & _SQLite_Escape($iAppmonitorRun), _
+        $hQuery _
+    )
+    If @error Then
+        ConsoleWriteError("Error while querying configuration value: " & @error & @CRLF)
+        Exit @error
+    EndIf
+
+    If _SQLite_FetchData($hQuery, $aRow) == $SQLITE_OK Then
+        If $aRow[0] == -1 Then
+            Local $sSQL = "" & _
+                "INSERT INTO appmonitor_testmeasureconfig " & _
+                "(name, failure_threshold, test_suite_id) " & _
+                "VALUES (" & _
+                    _SQLite_FastEscape($sName) & ", " & _
+                    _SQLite_FastEscape($iValue) & ", " & _
+                    $aRow[2] & _
+                ")"
+            Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)
+            If $iResult == $SQLITE_OK Then
+                Return
+            Else
+                ConsoleWriteError("SQLite Error: Failed to create measure config")
+                Exit -1
+            EndIf
+        ElseIf $aRow[1] == -1 Then
+            Local $sSQL = "" & _
+                "UPDATE appmonitor_testmeasureconfig " & _
+                "SET failure_threshold=" & _SQLite_FastEscape($iValue) & _
+                " WHERE id=" & $aRow[0]
+            Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)
+            If $iResult == $SQLITE_OK Then
+                Return
+            Else
+                ConsoleWriteError("SQLite Error: Failed to update measure config")
+                Exit -1
+            EndIf
+        EndIf
+    Else
+        Return ""
+    EndIf
+
+EndFunc
+
 
 Func AppmonitorCompleteMeasure($iMeasureId = -1)
     $iMeasureid = AppmonitorGetMeasure($iMeasureId)
@@ -435,8 +504,56 @@ Func AppmonitorExitWithError($iError)
     Exit($iError)
 EndFunc
 
+Func AppmonitorScreenCapture_SaveImage()
+    Local $sScreenshotsDir = _PathFull(@ScriptDir & "..\..\..\aalborg-monitor\appmonitor\static\screenshots\")
+    If Not $sScreenshotsDir Then
+        ConsoleWriteError("Could not get $sScreenshotsDir")
+        Exit -1
+    EndIf
+    Local $hBmp
+    ; FileName: 20160427092350.jpg
+    Local $sFileName = @year & @mon & @mday & "T" & @hour & @min & @sec & ".jpg"
+    ; Full path to file: C:\...\...\*.jpg
+    Local $sFilePath = $sScreenshotsDir & $sFileName
+
+    ; Capture full screen
+    $hBmp = _ScreenCapture_Capture("")
+
+    ; Save bitmap to file
+    _ScreenCapture_SaveImage($sFilePath, $hBmp)
+
+    ; Save record in database
+    AppmonitorInsertScreenshotRecord($sFilePath, $sFileName)
+EndFunc
+
+Func AppmonitorInsertScreenshotRecord($sFilePath, $sFileName)
+    Local $hAppmonitorDb = AppmonitorGetDbHandle()
+    Local $iAppmonitorRun = AppmonitorGetRun()
+    Local $iAppmonitorMeasure = AppmonitorGetMeasure()
+    Local $sAppmonitorMeasureName = AppmonitorGetMeasureName($iAppmonitorMeasure)
+
+    Local $sSQL = "" & _
+        "INSERT INTO appmonitor_screenshot " & _
+        "(test_run_id, measure_name, file_name, file_path) " & _
+        "VALUES (" & _
+            $iAppmonitorRun & ", " & _
+            _SQLite_FastEscape($sAppmonitorMeasureName) & ", " & _
+            _SQLite_FastEscape($sFileName) & ", " & _
+            _SQLite_FastEscape($sFilePath) & _
+        ")"
+    ConsoleWrite($sSQL)
+    Local $iResult = _SQLite_Exec($hAppmonitorDb, $sSQL)
+    If $iResult == $SQLITE_OK Then
+        Return
+    Else
+        ConsoleWriteError("SQLite Error: Failed to insert ScreenShot!")
+        Exit -1
+    EndIf
+EndFunc
+
 Func AppmonitorCheckError($iError)
     If $iError <> 0 Then
+        AppmonitorScreenCapture_SaveImage()
         AppmonitorExitWithError($iError)
     EndIf
 EndFunc

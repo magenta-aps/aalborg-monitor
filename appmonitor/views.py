@@ -11,12 +11,16 @@
 #
 # Copyright 2015 Magenta Aps
 #
+from aalborgmonitor.forms import TestSuiteDetailForm
 from django.shortcuts import render
 from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.http import HttpResponse, Http404
-from django.utils import dateparse
+from django.http.request import QueryDict
+from django.utils import dateparse, timezone
 from django.views.generic import ListView, DetailView, TemplateView, View
 from appmonitor.models import TestSuite, TestRun, TestMeasure
+from appmonitor.models import TestMeasureConfig
 from django.db.models import Count
 from markdown import Markdown
 import io, os, datetime, sys, glob, subprocess, locale, json
@@ -30,18 +34,83 @@ class TestSuiteList(ListView):
         name="DEBUG"
     ).order_by('name')
 
+
 class TestSuiteDetailView(DetailView):
     model = TestSuite
     template_name = 'testsuite.html'
     context_object_name = 'testsuite'
+    form = None
+
+    def tz_and_dateify(self, date):
+        if not date:
+            return None
+
+        return timezone.datetime(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+            hour=0,
+            minute=0,
+            tzinfo=timezone.get_current_timezone()
+        )
 
     def get_context_data(self, **kwargs):
+        today = timezone.now().date()
+        one_week_ago = today - datetime.timedelta(days=7)
+
         context = super(TestSuiteDetailView, self).get_context_data(**kwargs)
 
+        context['form'] = self.get_form()
+        cdata = context['form'].cleaned_data
+
+        context['result_overview_from'] = cdata.get("result_overview_from")
+        context['result_overview_to'] = cdata.get("result_overview_to")
+        context['executed_tests_from'] = cdata.get("executed_tests_from")
+        context['executed_tests_to'] = cdata.get("executed_tests_to")
+
+        result_overview_from = self.tz_and_dateify(
+            context['result_overview_from']
+        )
+        result_overview_to = self.tz_and_dateify(
+            context['result_overview_to']
+        )
+        executed_tests_from = self.tz_and_dateify(
+            context['executed_tests_from']
+        )
+        executed_tests_to = self.tz_and_dateify(
+            context['executed_tests_to']
+        )
+
+
         if self.object:
-            context['runs'] = self.object.testrun_set.order_by('-started')
+            context['test_data'] = self.object.test_data(
+                result_overview_from,
+                result_overview_to
+            )
+
+
+            qs = self.object.testrun_set
+            if executed_tests_from:
+                qs = qs.filter(started__gte=executed_tests_from)
+            if executed_tests_to:
+                qs = qs.filter(
+                    started__lt=executed_tests_to + datetime.timedelta(days=1)
+                )
+
+            context['runs'] = qs.order_by('-started')
 
         return context
+
+    def get_form(self):
+        if not self.form:
+            # Make new form object
+            self.form = TestSuiteDetailForm(
+                self.request.GET,
+            )
+            # Process the form
+            self.form.is_valid()
+        return self.form
+
 
 class TestSuiteDownloadView(DetailView):
     model = TestSuite
@@ -52,7 +121,6 @@ class TestSuiteDownloadView(DetailView):
             self.object.as_xls(), 'application/vnd.ms-excel'
         )
         dtstamp =  datetime.datetime.now().isoformat()[:19]
-        print dtstamp
         dtstamp = dtstamp.replace("T", "_").replace(":", "")
         fname = 'excel_export_%d_%s.xls' % (self.object.pk, dtstamp)
         hdr = 'attachment; filename="%s"' % fname
@@ -103,26 +171,67 @@ class DocumentationView(TemplateView):
 
         return context
 
+
 class MeasureView(TemplateView):
     template_name = 'measure.html'
+
+    BY_DAYS_ALL = -1
+    BY_DAYS_MANUAL = -2
+
+    by_days_choices = (
+        (1, u"Seneste døgn"),
+        (3, u"Seneste tre dage"),
+        (7, u"Seneste uge"),
+        (30, u"Seneste 30 dage"),
+        (BY_DAYS_ALL, u"Alle målinger"),
+        (BY_DAYS_MANUAL, u"Manuelt angivet"),
+    )
 
     def get_context_data(self, **kwargs):
         context = super(MeasureView, self).get_context_data(**kwargs)
 
+        img_args = self.request.GET.copy()
+
         context['testsuite'] = TestSuite.objects.get(pk=kwargs['pk'])
         context['mname'] = kwargs['mname']
-        context['t'] = self.request.GET.get("t", "")
-        context['cmp'] = self.request.GET.get("cmp", "")
-        context['cmp_ts'] = self.request.GET.get("cmp_ts", "")
-        context['from'] = self.request.GET.get("from", "")
-        context['to'] = self.request.GET.get("to", "")
-        days = self.request.GET.get("days", "")
-        if days == '':
-            context['days'] = '7'
-        else:
-            context['days'] = days
+        days = self.request.GET.get("days", "7")
+        try:
+            days = int(days)
+        except:
+            days = 7
+        if days not in [x[0] for x in MeasureView.by_days_choices]:
+            days = 7
+
+        context["days"] = days
+        context["days_choices"] = [
+            {'text': x[1], 'value': x[0], 'selected': x[0] == days}
+            for x in MeasureView.by_days_choices
+        ]
+
+        img_remove_args = ["days", "cmp_ts"]
+
+        if days != MeasureView.BY_DAYS_MANUAL:
+            img_remove_args.append("from")
+            img_remove_args.append("to")
+
+        for x in img_remove_args:
+            if x in img_args:
+                img_args.pop(x)
+
+        if days > 0:
+            dt = timezone.now() - datetime.timedelta(days=days)
+            img_args['from'] = dt.strftime('%d-%m-%Y')
+
+        autoupdate = self.request.GET.get("autoupdate", "10")
+        if autoupdate not in ["1", "10", "30", "60", ""]:
+            autoupdate = "10"
+
+        context["autoupdate"] = autoupdate
+
 
         cmp_data = []
+        own_measures = []
+        other_measures = []
         qs = TestMeasure.objects.exclude(
             test_run__test_suite__name="DEBUG"
         ).values(
@@ -133,6 +242,9 @@ class MeasureView(TemplateView):
             "test_run__test_suite__name",
             "name"
         ).distinct()
+
+        ts_pk = int(kwargs['pk'])
+
         for m in qs:
             if (len(cmp_data) == 0 or
                 cmp_data[-1]["pk"] != m["test_run__test_suite__pk"]):
@@ -144,76 +256,74 @@ class MeasureView(TemplateView):
             cmp_data[-1]["items"].append(
                 '%s/%s' % (m["test_run__test_suite__pk"], m["name"])
             )
+            if m['test_run__test_suite__pk'] == ts_pk:
+                if m["name"] != kwargs["mname"]:
+                    own_measures.append(m)
+            else:
+                other_measures.append(m)
+
         context["cmp_data"] = cmp_data
         context["cmp_data_json"] = json.dumps(cmp_data)
+        context["own_measures"] = own_measures
+        context["other_measures"] = other_measures
+
+        context['measureconfig'] = TestMeasureConfig.get_or_create(
+            context['testsuite'], kwargs['mname']
+        )
+
+        context['img_args'] = img_args.urlencode(safe='%/')
+
+        context['cancel_alarm_url'] = reverse(
+            'appmonitor:cancelalarm', args=[kwargs["pk"], kwargs["mname"]]
+        )
 
         return context
 
+
 class MeasurePNGView(View):
     def get(self, request, *args, **kwargs):
-        os_encoding = locale.getpreferredencoding()
+        args_dict = request.GET.copy()
+        args_dict.update({
+            "test_suite_pk": kwargs["pk"],
+            "measure_name": kwargs["mname"]
+        })
+
         cmd = [
             settings.PYTHON_EXE,
             os.path.join(settings.BASE_DIR, "bin", "plot_png.py"),
-            kwargs["pk"],
-            kwargs["mname"],
-            request.GET.get("t", ""),
+            args_dict.urlencode(safe='/%')
         ]
-        cmp_str = request.GET.get("cmp", None)
-        if cmp_str:
-            for x in cmp_str.split("/", 1):
-                cmd.append(x)
-        else:
-            cmd.append("")
-            cmd.append("")
-        # 'days=' in query string calculates and overrules 'from='
-        if request.GET.get("days", None):
-            days = request.GET.get("days")
-            t_from = ''
-            now = datetime.datetime.now()
-            if days == '1':
-                t_from = now - datetime.timedelta(1)
-            elif days == '3':
-                t_from = now - datetime.timedelta(3)
-            elif days == '7' or days == '':
-                t_from = now - datetime.timedelta(7)
-            elif days == '30':
-                t_from = now - datetime.timedelta(30)
-            # this is ruled by 'days=' here
-            cmd.append(str(t_from))
-        else:
-            t_from = request.GET.get("from", None)
-            try:
-                t_from = dateparse.parse_datetime(t_from)
-                if not t_from:
-                    t_from = ""
-            except:
-                t_from = ""
-            cmd.append(str(t_from))
 
-            t_to = request.GET.get("to", None)
-            try:
-                t_to = dateparse.parse_datetime(t_to)
-                if not t_to:
-                    t_to = ""
-            except:
-                t_to = ""
-            cmd.append(str(t_to))
+        print "Plot png: %s" % cmd[-1]
 
-        cmd = [unicode(x).encode(os_encoding) for x in cmd]
-        fname = subprocess.check_output(cmd, env=os.environ.copy()).strip()
+        result = subprocess.check_output(cmd, env=os.environ.copy()).strip()
+
+        qdict = QueryDict(result)
+        fname = qdict.get("fname")
+        alarm = qdict.get("alarm")
+
         if fname and fname != "":
-            f = open(fname.decode(os_encoding), 'rb')
+            f = open(fname, 'rb')
             response = HttpResponse(f.read(), 'image/png')
             f.close()
+            m_path = reverse(
+                'appmonitor:measure', args=[kwargs["pk"], kwargs["mname"]]
+            )
+            response.set_cookie("alarm_state", alarm, path=m_path)
             return response
         else:
-            f = open('appmonitor/static/appmonitor/nodata.png'.decode(os_encoding), 'rb')
+            f = open('appmonitor/static/appmonitor/nodata.png', 'rb')
             response = HttpResponse(f.read(), 'image/png')
             f.close()
             return response
 
-            #raise Http404("Image not found")
+class CancelAlarmView(View):
+    def get(self, request, *args, **kwargs):
+        cnf = TestMeasureConfig.get_or_create(
+            kwargs["pk"], kwargs["mname"]
+        )
+        cnf.reset_alarm_status()
+        return HttpResponse("OK", 'text/plin')
 
 
 class ErrorReportView(ListView):

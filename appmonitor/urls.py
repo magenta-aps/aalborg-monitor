@@ -14,7 +14,7 @@ from django.conf.urls import url
 from appmonitor.views import TestSuiteList, TestSuiteDetailView
 from appmonitor.views import TestSuiteDownloadView, MeasureView, MeasurePNGView
 from appmonitor.views import TestRunDetailView, DocumentationView
-from appmonitor.views import ErrorReportView
+from appmonitor.views import ErrorReportView, CancelAlarmView
 
 urlpatterns = [
     url(r'^$',
@@ -23,6 +23,9 @@ urlpatterns = [
     url(r'^testsuite/(?P<pk>[0-9]+)/(?P<mname>.*).png/?',
         MeasurePNGView.as_view(),
         name="png"),
+    url(r'^testsuite/(?P<pk>[0-9]+)/(?P<mname>.*)/cancelalarm/?',
+        CancelAlarmView.as_view(),
+        name="cancelalarm"),
     url(r'^testsuite/(?P<pk>[0-9]+)/(?P<mname>.*)/?',
         MeasureView.as_view(),
         name="measure"),

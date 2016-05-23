@@ -57,6 +57,20 @@
         {% endif %}
     </div>
 </div>
+{% if not testrun.succeeded %}
+    <div class="row">
+        <div class="col-md-2">
+            <strong>Screenshot</strong>
+        </div>
+        <div class="col-md-6">
+            {% load staticfiles %}
+            <a href="{% static 'screenshots/' %}{{ testrun.get_screenshot }}"
+               class="btn btn-default screenshotlink" role="button"
+               ><span class="glyphicon glyphicon-picture"></span>
+            </a>
+        </div>
+    </div>
+{% endif %}
 <div>
 <h2>Målinger</h2>
 <table class="table table-bordered table-striped table-hover">

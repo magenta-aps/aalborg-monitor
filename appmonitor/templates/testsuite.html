@@ -62,31 +62,47 @@
 
 <div>
 
-<h2>Resultat-overblik</h2>
-<table class="table table-bordered table-striped table-hover">
-    <thead>
-        <tr class="info">
-            <th>Måling</th>
-            <th class="text-right">Antal målinger</th>
-            <th class="text-right">Antal fejlede</th>
-            <th class="text-right">Gennemsnitlig brugt tid</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for entry in testsuite.test_data %}
-        <tr class="{{ entry.class }}">
-            <td class="primary"><a
-                href="{% url 'appmonitor:measure' testsuite.pk entry.name %}"
-                >{{ entry.name }}</a></td>
-            <td class="text-right">{{ entry.total }}</td>
-            <td class="text-right">{{ entry.failures }}</td>
-            <td class="text-right">{{ entry.avg_time|floatformat:4 }}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+<form>
+    <h2>Resultat-overblik</h2>
+    {{ form.result_overview_from.errors }}
+    <label for="{{ form.result_overview_from.id_for_label }}">{{ form.result_overview_from.label }}</label>
+    {{ form.result_overview_from }}
+    {{ form.result_overview_to.errors }}
+    <label for="{{ form.result_overview_to.id_for_label }}">{{ form.result_overview_to.label }}</label>
+    {{ form.result_overview_to }}
+    <input type="submit" name="button_1" value="Opdater">
+    <table class="table table-bordered table-striped table-hover">
+        <thead>
+            <tr class="info">
+                <th>Måling</th>
+                <th class="text-right">Antal målinger</th>
+                <th class="text-right">Antal fejlede</th>
+                <th class="text-right">Gennemsnitlig brugt tid</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for entry in test_data %}
+            <tr class="{{ entry.class }}">
+                <td class="primary"><a
+                    href="{% url 'appmonitor:measure' testsuite.pk entry.name %}"
+                    >{{ entry.name }}</a></td>
+                <td class="text-right">{{ entry.total }}</td>
+                <td class="text-right">{{ entry.failures }}</td>
+                <td class="text-right">{{ entry.avg_time|floatformat:4 }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 
-<h2>Afviklede tests</h2>
+    <h2>Afviklede tests</h2>
+    {{ form.executed_tests_from.errors }}
+    <label for="{{ form.executed_tests_from.id_for_label }}">{{ form.executed_tests_from.label }}</label>
+    {{ form.executed_tests_from }}
+    {{ form.executed_tests_to.errors }}
+    <label for="{{ form.executed_tests_to.id_for_label }}">{{ form.executed_tests_to.label }}</label>
+    {{ form.executed_tests_to }}
+    <input type="submit" name="button_2" value="Opdater">
+</form>
 <table class="table table-bordered table-striped table-hover table-clickablerows">
     <thead>
         <tr class="info">
@@ -109,7 +125,11 @@
                 {% if testrun.succeeded %}
                     <span class="label label-success">Ja</span>
                 {% else %}
+                    {% if testrun.has_alerts %}
+                    <span class="label label-warning">Ja, med alarmer</span>
+                    {% else %}
                     <span class="label label-warning">Nej</span>
+                    {% endif %}
                 {% endif %}
             </td>
             <td class="text-center">
@@ -121,6 +141,13 @@
                    class="rowclicktarget btn btn-default" role="button"
                    ><span class="glyphicon glyphicon-list-alt"></span
                 ></a>
+                {% if not testrun.succeeded %}
+                    {% load staticfiles %}
+                    <a href="{% static 'screenshots/' %}{{ testrun.get_screenshot }}"
+                       class="btn btn-default screenshotlink" role="button"
+                       ><span class="glyphicon glyphicon-picture"></span>
+                    </a>
+                {% endif %}
             </td>
         </tr>
     {% endfor %}
@@ -128,4 +155,17 @@
 </table>
 
 </div>
+{% endblock %}
+{% block bodyend_scripts %}
+<script type="text/javascript"><!--
+(function($) {
+    $('.datepicker').datepicker({
+        language: 'da',
+        format: "dd-mm-yyyy",
+    }).on('changeDate', function(e){
+        $(this).datepicker('hide');
+    });
+})(jQuery)
+
+//--></script>
 {% endblock %}

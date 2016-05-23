@@ -90,7 +90,12 @@ def wrap_run_autoit(script_path):
     result = run_autoit_script(script_path, run)
 
     run.finish(result)
-    
+
+    # Trigger a save for each created testmeasure item so time_spent
+    # field is updated.
+    for x in run.testmeasure_set.all():
+        x.save()
+
     return result
 
 # When run as a script, compone and execute the script given
